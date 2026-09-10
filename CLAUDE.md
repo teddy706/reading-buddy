@@ -54,6 +54,15 @@
 - [x] **4. '독서로' 자동 연동 (수동 등록 가이드 버전)**: 부모의 '독서로' 실제 로그인이 에듀넷 자체 계정임을 확인했으나(SNS 간편 로그인 아님), 이용약관상 자동화(크롤링) 허용 여부가 아직 불명확해서 **Playwright 기반 완전 자동화는 만들지 않기로 사용자가 명시적으로 선택**함("수동 등록 가이드부터(추천)" 옵션 채택). 대신 `/records/[id]`(자녀)·`/settings/records`의 상세 화면(`RecordDetail`)에 "'독서로'에 등록하기" 카드를 추가: (1) 책 제목/날짜/내용을 한 번에 클립보드로 복사하는 버튼, (2) `read365.edunet.net`을 새 탭으로 여는 링크, (3) 사람이 '독서로'에 직접 붙여넣은 뒤 눌러서 상태를 표시하는 "✅ '독서로'에 등록했어요" / "등록 취소로 되돌리기" 토글(`reading_records.dokseoro_status`: pending↔synced, `/api/reading-records/[id]` PATCH에 `dokseoroStatus` 필드 추가). 자녀 본인 기록과 부모가 보는 타 자녀 기록 양쪽에서 실제 브라우저로 복사/외부 링크/상태 토글·되돌리기까지 확인, DB에 `dokseoro_status`가 정확히 반영됨을 SQL로 검증함. 자동 연동(Playwright)은 이용약관 확인 후 필요하면 별도로 재검토
 - [x] **5. 기록 관리**: `/records`(자녀 본인 기록 전체 히스토리) · `/records/[id]`(상세, 책 제목/날짜/내용 전부 수정 가능 — RLS가 "본인 것만" vs "가족 전체" 접근을 가른다) · `/settings/records`(부모 대시보드, 두 자녀 기록을 프로필별로 그룹핑해서 한 화면에) · `/home`과 `/records`에서 공용 `RecordCard`(제목/날짜/출처 아이콘/독서로 상태 배지/내용 미리보기)로 통일. `/api/reading-records/[id]` PATCH 하나로 자녀 본인 수정과 부모의 타 자녀 기록 수정을 동시에 지원(권한 분기는 RLS `reading_records_update` 정책이 전담, 라우트 코드는 역할 분기 없음). 실제 브라우저로 자녀 2명 만들고 기록 3건을 시딩해서: 자녀가 본인 기록만 보고 수정 → 로그아웃 → 부모로 로그인 → `/settings/records`에서 두 자녀 기록이 올바르게 그룹핑되어 보이는지 → 다른 자녀(로그인한 부모의 자녀가 아닌 쪽)의 기록을 부모가 직접 수정 → DB에 반영되는지까지 전부 확인함
 
+## Phase 2 범위 (2026-09-10 확정, 우선순위는 진행하며 사용자가 그때그때 지정)
+
+PRD 4.2 "MVP 이후 로드맵" 후보 중 사용자가 명시적으로 아래 4개를 선택함. '독서로' 완전 자동화(Playwright)는 이번에 선택하지 않았으므로 계속 보류(4번 항목 참고, 이용약관 확인 전까지 수동 가이드 유지). Phase 1과 마찬가지로 **한 번에 하나씩, 사용자가 지정하는 순서대로 진행** — 임의로 다음 항목에 손대지 말 것.
+
+- [ ] **A. Vercel 배포**: 지금까지는 로컬 dev 서버로만 개발/테스트함. 실제 기기(특히 아직 검증 못 한 🎤 음성 입력)로 써보려면 배포가 필요. PRD 6.2는 "Azure Static Web Apps 또는 Vercel"을 호스팅 후보로 뒀는데, 사용자가 Vercel을 명시적으로 선택함. `.env.local`의 모든 환경변수를 Vercel 프로젝트 설정에 옮겨야 함(Supabase/Azure OpenAI/Speech/Document Intelligence/Kakao 키 전부)
+- [ ] **B. 독서 통계/리포트**: 월간 독서량, 장르 분포 등을 부모 대시보드에 리포트. 이미 쌓인 `reading_records` 테이블 데이터로 바로 시작 가능, 새 외부 API 불필요 — 4개 중 가장 착수 부담이 적음
+- [ ] **C. 표지 촬영 자동 인식**: `/read/new/book`에서 책 제목을 직접 입력하는 대신 표지 사진으로 책 정보 자동 매칭. 접근 방식(ISBN 바코드 스캔 vs 표지 이미지 OCR로 제목 인식 후 카카오 도서 검색 API 매칭 등) 설계 필요 — 착수 전에 먼저 방식을 정할 것
+- [ ] **D. 형제자매 비교/배지·스탬프**: 쌍둥이 간 선의의 경쟁 요소. 배지 규칙(무엇을 달성하면 어떤 배지인지), 새 테이블(예: `badges`/`badge_awards`) 설계 필요 — 4개 중 설계 범위가 가장 넓음
+
 ## Supabase 셋업 중 발견한 함정 (재발 방지용 기록)
 
 - **service_role 키는 반드시 legacy JWT 형식**: API Keys 화면의 새 형식 secret key(`sb_secret_...`)로 `SUPABASE_SERVICE_ROLE_KEY`를 채우면 `auth.admin.createUser()`는 되는데 `admin.from(table).insert(...)` 같은 PostgREST 호출이 전부 `permission denied`로 막힌다(GoTrue admin API와 PostgREST의 role 판별 방식이 다름). "Legacy anon, service_role API keys" 탭의 JWT를 써야 한다
