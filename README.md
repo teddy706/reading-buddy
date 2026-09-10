@@ -22,13 +22,21 @@ npm run dev
 
 ### Supabase 셋업
 
-1. [supabase.com](https://supabase.com)에서 새 프로젝트 생성 (무료 티어)
-2. 프로젝트 설정 > API 에서 URL/anon key/service role key를 `.env.local`에 복사
-3. `supabase/migrations/*.sql`을 순서대로 SQL Editor에서 실행 (또는 `supabase db push`)
+1. [supabase.com](https://supabase.com)에서 새 프로젝트 생성 (무료 티어). 생성 화면의 Security 섹션에서
+   **"Automatically expose new tables"는 꺼도 되지만, 그러면 `0006_grants.sql`이 GRANT를 대신 잡아줘야
+   서비스 롤조차 테이블에 접근할 수 있다** — 이 저장소의 마이그레이션에는 이미 포함되어 있음
+2. 프로젝트 설정 > API Keys 에서 URL과 publishable(anon) key를 `.env.local`에 복사.
+   **service role key는 반드시 "Legacy anon, service_role API keys" 탭의 JWT를 사용할 것** — 새 형식
+   secret key(`sb_secret_...`)는 GoTrue admin API(`auth.admin.createUser` 등)에는 동작하지만
+   PostgREST의 RLS 우회(`admin.from(...).insert` 등)에는 `role=service_role` JWT가 필요해서 동작하지 않는다
+   ("permission denied for table ..." 오류로 나타남)
+3. `supabase/migrations/*.sql`을 **번호 순서대로** SQL Editor에서 실행 (또는 `supabase db push`)
    - `0001_schema.sql` — families/profiles + 독서 기록 도메인 테이블
    - `0002_functions_triggers.sql` — RLS 헬퍼 함수(`my_family_id()` 등)
    - `0003_rls.sql` — Row Level Security 정책
    - `0004_storage.sql` — 독서노트 사진용 비공개 스토리지 버킷
+   - `0005_pin_lockout.sql` — 자녀 PIN 5회 실패 잠금용 컬럼
+   - `0006_grants.sql` — anon/authenticated/service_role 테이블 GRANT (위 1번 참고)
 4. `CHILD_AUTH_SECRET`, `DOKSEORO_CREDENTIALS_ENCRYPTION_KEY`는 `openssl rand -hex 32`로 생성
 
 ### 인증 구조 (중요)
@@ -52,8 +60,9 @@ docs/
 
 ## 다음 단계
 
-PRD 10절 기준:
+Phase 1의 "1. 계정/인증"(부모 회원가입/로그인, 자녀 프로필 생성, 프로필 선택 → PIN → 전환)은 구현·테스트 완료. 다음은 [CLAUDE.md](CLAUDE.md)의 "Phase 1 진행 순서" 2번(대화 기반 독서 기록)부터.
+
+PRD 10절 기준 별도 확인 필요 사항:
 
 1. 부모의 '독서로' 실제 로그인 방식 확인 (에듀넷 자체 계정 vs SNS 간편 로그인)
 2. '독서로' 이용약관 직접 확인 (자동화 가능 범위 최종 확정)
-3. MVP 기능 구현 착수 — 우선순위는 [CLAUDE.md](CLAUDE.md)의 "Phase 1 진행 순서" 참고

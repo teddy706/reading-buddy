@@ -30,6 +30,14 @@ export function isValidPin(pin: string) {
   return /^\d{4}$/.test(pin);
 }
 
+// PRD 3.1 확정 정책: 5회 연속 실패 시 1분간 잠금.
+export const PIN_MAX_ATTEMPTS = 5;
+export const PIN_LOCK_DURATION_MS = 60 * 1000;
+
+export function isPinLocked(profile: { pin_locked_until: string | null }) {
+  return !!profile.pin_locked_until && new Date(profile.pin_locked_until).getTime() > Date.now();
+}
+
 // profiles.pin_hash 는 인증에 쓰이지 않고(위 derive 함수가 실제 비밀번호를 만든다),
 // 부모가 자녀 프로필 목록에서 "PIN을 잊었어요" 같은 흐름을 만들 때 대조용으로만 쓴다.
 export async function hashPinForDisplay(pin: string) {

@@ -17,6 +17,8 @@ export interface Profile {
   name: string;
   avatar: string;
   pin_hash: string | null;
+  pin_fail_count: number;
+  pin_locked_until: string | null;
   created_at: string;
 }
 
