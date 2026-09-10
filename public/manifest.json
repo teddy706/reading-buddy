@@ -1,0 +1,10 @@
+{
+  "name": "리딩버디",
+  "short_name": "리딩버디",
+  "description": "아이와의 대화로 독서 기록을 남기는 가족용 앱",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fffdf8",
+  "theme_color": "#fffdf8",
+  "icons": []
+}
