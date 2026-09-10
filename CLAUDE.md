@@ -1,6 +1,6 @@
 # CLAUDE.md — 리딩버디 (독서 기록 앱)
 
-이 파일은 프로젝트 루트에 두고 Claude Code가 매 세션 시작 시 참고하는 컨텍스트 문서입니다. **Phase 1의 "1. 계정/인증"과 "2. 대화 기반 독서 기록"까지 구현·실제 브라우저 테스트 완료. 지금은 "3. 독서노트 OCR 입력"부터 순서대로 진행 중입니다.**
+이 파일은 프로젝트 루트에 두고 Claude Code가 매 세션 시작 시 참고하는 컨텍스트 문서입니다. **Phase 1의 "1. 계정/인증", "2. 대화 기반 독서 기록", "3. 독서노트 OCR 입력"까지 구현·실제 브라우저 테스트 완료. 지금은 "4. '독서로' 자동 연동"부터 순서대로 진행 중입니다.**
 
 ## 프로젝트 개요
 
@@ -51,7 +51,7 @@
 
 - [x] **1. 계정/인증**: 부모 회원가입/로그인(`/signup`, `/login`), 자녀 프로필 생성 UI(`/profiles/new`), 프로필 선택(`/profiles`) → PIN 입력(`/profiles/[id]/pin`) → 세션 전환 → 자녀 홈(`/home`) 흐름 구현 및 실제 브라우저로 전체 플로우(가입→프로필 생성→PIN 성공/실패/5회 잠금→나가기→재로그인→PIN 재설정)까지 테스트 완료. 부모 설정(`/settings/children`)에서 이름/아바타 수정 + PIN 재설정 가능
 - [x] **2. 대화 기반 독서 기록**: `/read/new`(기록 방식 선택, OCR 카드는 비활성) → `/read/new/book`(책 제목/저자 입력) → `/read/[id]/chat`(대화 진행, 텍스트+음성 입력, N/4 진행 표시, "그만할래") → `/read/[id]/review`(감상문 생성/편집, 원본 대화 펼쳐보기, 저장) → `/home`에 반영. `src/lib/azureOpenAI.ts`(`generateNextQuestion`/`generateEssay`, gpt-5.4-mini/gpt-4o, `max_completion_tokens` 사용)와 `src/lib/azureSpeech.ts`(음성 답변 STT, REST 단문 인식 엔드포인트)로 구현. 실제 브라우저로 텍스트 답변 4턴 → 감상문 생성 → 저장까지 end-to-end 확인, DB에 `reading_records`(dokseoro_status=pending) + `conversation_sessions`(status=completed) 생성됨을 SQL로 검증함. **음성 입력(🎤 버튼)은 자동화 브라우저에 마이크가 없어 직접 테스트 못 함 — 실제 기기에서 확인 필요**. 카카오 도서 검색 API로 줄거리 요약을 가져와 질문 생성 컨텍스트로 사용하도록 이후 추가 완료(`fetchBookContext`, `next-question` 라우트에서 매 턴 호출) — "해리포터와 마법사의 돌"로 실제 브라우저 테스트해 대화 진행/감상문 생성까지 정상 확인
-- [ ] **3. 독서노트 OCR 입력**: 사진 촬영 → Document Intelligence OCR → 결과 확인/수정 UI (와이어프레임: docs/PRD.md 9.6). "확인"이 아니라 "수정"이 기본 동작이어야 함
+- [x] **3. 독서노트 OCR 입력**: `/read/new`의 OCR 카드 활성화 → `/read/ocr/new`(사진 촬영/선택, 즉시 업로드) → `/read/ocr/[id]/review`(원본 사진 + 책 제목/날짜/내용 필드 — 전부 기본이 "수정 가능"한 입력창, "확인" 버튼 없음) → 저장 → `/home`에 반영. `src/lib/documentIntelligence.ts`(`analyzeImage`, prebuilt-read 모델, analyze→Operation-Location 폴링)로 OCR, `src/lib/azureOpenAI.ts`의 `parseOcrRecord`(gpt-5.4-mini)로 원문을 책 제목/내용으로 구조화(창작 없이 재배열만). OCR/구조화 실패 시에도 에러를 던지지 않고 `ocr_uploads.status='failed'`로 기록하고 빈 칸인 채로 같은 수정 화면을 열어 "직접 입력" 경로를 자연스럽게 제공. 손글씨 대신 인쇄 텍스트로 만든 테스트 이미지("강아지똥" 독서노트)로 Document Intelligence·GPT 구조화를 curl로 먼저 검증한 뒤, 실제 Chrome + 파일 업로드로 사진 선택 → OCR → 리뷰 화면 자동 채움 → 저장까지 전체 플로우 확인, DB에 `reading_records`(source_type=ocr) + `ocr_uploads`(status=processed) 생성됨을 SQL로 검증함. 여러 책이 찍힌 사진 자동 분리는 PRD도 "MVP 이후 검토"라 미구현(한 사진 = 한 기록)
 - [ ] **4. '독서로' 자동 연동**: 로그인 방식 확인 후 착수. Playwright 기반 자동화 + 실패 시 수동 등록 가이드 폴백 필수
 - [ ] **5. 기록 관리**: 자녀별 기록 리스트/히스토리, 부모 대시보드(두 자녀 기록 현황 + 프로필/PIN 관리) — `/home`은 현재 빈 목록 placeholder만 있음
 
@@ -60,6 +60,7 @@
 - **service_role 키는 반드시 legacy JWT 형식**: API Keys 화면의 새 형식 secret key(`sb_secret_...`)로 `SUPABASE_SERVICE_ROLE_KEY`를 채우면 `auth.admin.createUser()`는 되는데 `admin.from(table).insert(...)` 같은 PostgREST 호출이 전부 `permission denied`로 막힌다(GoTrue admin API와 PostgREST의 role 판별 방식이 다름). "Legacy anon, service_role API keys" 탭의 JWT를 써야 한다
 - **"Automatically expose new tables"를 끄면 service_role도 GRANT가 없다**: 프로젝트 생성 시 이 옵션을 끄면 anon/authenticated 노출만 막히는 게 아니라, 새로 만드는 모든 테이블에 대해 service_role 포함 아무 role도 기본 GRANT를 못 받는다(RLS와는 별개 계층). `0006_grants.sql`이 이걸 명시적으로 고쳐준다 — 이 프로젝트에서 앞으로도 저 옵션은 끈 채로 가져가되, 새 테이블을 추가하는 마이그레이션마다 `0006_grants.sql`의 `alter default privileges`가 이미 커버하는지 재확인할 것
 - Supabase 대시보드 SQL Editor를 브라우저 자동화로 조작할 때는 `cmd+Return`/`cmd+A`가 안 먹을 수 있다는 이슈도 있었음(별도 메모리에 기록) — Run 버튼을 직접 클릭하고 실행 후 실제 값을 다시 조회해서 검증할 것
+- **`storage.objects`는 일반 SQL `delete`로 못 지운다**(`storage.protect_delete()` 트리거가 막음, "Use the Storage API instead"). 테스트 데이터 정리 시 `families`/`auth.users`와 한 쿼리에 같이 넣으면 그 문장에서 전체 트랜잭션이 롤백된다 — Storage REST API(`DELETE {url}/storage/v1/object/{bucket}/{path}`, service_role 키)로 먼저 지우고, DB row 삭제는 별도 쿼리로 실행할 것
 
 ## Azure 셋업 중 발견한 함정 (재발 방지용 기록)
 

@@ -142,3 +142,60 @@ export async function generateEssay(params: {
   if (!input.essay?.trim()) throw new Error("감상문을 만들지 못했어요.");
   return input.essay.trim();
 }
+
+export interface ParsedOcrRecord {
+  bookTitle: string;
+  content: string;
+}
+
+// 독서노트 손글씨 OCR 원문은 줄바꿈이 뒤섞여 있어 "책 제목 / 내용"으로 나누기 어렵다.
+// 저지연 경량 모델로 항목만 분류하게 한다 — 문장을 새로 짓거나 내용을 보태지 않고,
+// 인식된 텍스트에 실제로 있는 것만 재배열/오탈자 정리한다(감상문 생성과 달리 창작 여지가 없음).
+export async function parseOcrRecord(rawText: string): Promise<ParsedOcrRecord> {
+  const response = await getClient().chat.completions.create({
+    model: process.env.AZURE_OPENAI_QUESTION_DEPLOYMENT!,
+    max_completion_tokens: 600,
+    messages: [
+      {
+        role: "system",
+        content: [
+          "너는 초등학생 독서노트를 OCR로 인식한 텍스트를 정리하는 도우미다.",
+          "아래 원칙을 반드시 지켜라.",
+          "1. 텍스트에 실제로 있는 내용만 사용한다. 없는 내용을 새로 짓지 않는다.",
+          "2. OCR 특유의 오탈자나 줄바꿈 깨짐만 자연스럽게 다듬는다.",
+          "3. 책 제목으로 보이는 부분을 bookTitle로, 나머지 감상/줄거리 내용을 content로 나눈다.",
+          "4. 책 제목을 못 찾겠으면 bookTitle을 빈 문자열로 둔다.",
+        ].join("\n"),
+      },
+      { role: "user", content: rawText || "(인식된 텍스트 없음)" },
+    ],
+    tools: [
+      {
+        type: "function",
+        function: {
+          name: "structure_ocr",
+          description: "OCR 텍스트를 책 제목과 내용으로 나눈다.",
+          parameters: {
+            type: "object",
+            properties: {
+              bookTitle: { type: "string", description: "책 제목. 못 찾으면 빈 문자열" },
+              content: { type: "string", description: "책 제목을 제외한 나머지 독서 기록 내용" },
+            },
+            required: ["bookTitle", "content"],
+          },
+        },
+      },
+    ],
+    tool_choice: { type: "function", function: { name: "structure_ocr" } },
+  });
+
+  const toolCall = response.choices[0]?.message?.tool_calls?.[0];
+  if (!toolCall || toolCall.type !== "function") {
+    return { bookTitle: "", content: rawText };
+  }
+  const input = JSON.parse(toolCall.function.arguments) as { bookTitle?: string; content?: string };
+  return {
+    bookTitle: input.bookTitle?.trim() ?? "",
+    content: input.content?.trim() || rawText,
+  };
+}
