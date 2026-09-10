@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateNextQuestion } from "@/lib/azureOpenAI";
 import { fetchBookContext } from "@/lib/kakaoBook";
-import { TOTAL_QUESTIONS } from "@/lib/readingSession";
+import { TOTAL_QUESTIONS, stageForQuestionIndex } from "@/lib/readingSession";
 import type { ConversationMessage } from "@/lib/types";
 
 // 대화 진행 화면이 매 턴 호출한다. answerText가 있으면 먼저 아이 답변을 messages에 추가하고,
@@ -40,6 +40,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   const bookContext = await fetchBookContext(session.book_title, session.book_author);
+  const stage = stageForQuestionIndex(answeredCount);
 
   const question = await generateNextQuestion({
     bookTitle: session.book_title,
@@ -47,12 +48,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
     bookContext,
     history: messages,
     questionIndex: answeredCount,
+    stage,
   });
 
   messages.push({
     role: "assistant",
     content: question ?? "그 책에 대해 더 이야기해줄래?",
     created_at: new Date().toISOString(),
+    stage,
   });
 
   const { error: updateError } = await supabase.from("conversation_sessions").update({ messages }).eq("id", session.id);

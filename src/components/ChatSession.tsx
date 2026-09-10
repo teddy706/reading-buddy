@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { TOTAL_QUESTIONS } from "@/lib/readingSession";
+import { TOTAL_QUESTIONS, STAGE_LABELS, stageForQuestionIndex } from "@/lib/readingSession";
 import type { ConversationMessage, ConversationSession } from "@/lib/types";
 
 export function ChatSession({ session }: { session: ConversationSession }) {
@@ -106,6 +106,7 @@ export function ChatSession({ session }: { session: ConversationSession }) {
         <div>
           <h1 className="text-lg font-bold">{session.book_title}</h1>
           <p className="text-xs text-soft">
+            {STAGE_LABELS[stageForQuestionIndex(Math.min(answeredCount, TOTAL_QUESTIONS - 1))]} ·{" "}
             {Math.min(answeredCount, TOTAL_QUESTIONS)}/{TOTAL_QUESTIONS} 질문
           </p>
         </div>

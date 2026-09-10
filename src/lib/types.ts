@@ -42,10 +42,16 @@ export interface ReadingRecord {
 
 export type ConversationStatus = "in_progress" | "completed";
 
+export type ReadingCoachStage = 1 | 2 | 3;
+
 export interface ConversationMessage {
   role: "assistant" | "child";
   content: string;
   created_at: string;
+  // assistant(질문) 메시지에만 붙는다 — 단계별 독서록 유도 질문 프레임워크(1:장면 소환,
+  // 2:역할 바꾸기, 3:현실 적용)에서 이 질문이 어느 단계인지. 감상문 조립 시 어떤 답변이
+  // 어느 단락(처음/가운데/끝)에 들어가야 하는지 판별하는 데 쓴다.
+  stage?: ReadingCoachStage;
 }
 
 export interface ConversationSession {
