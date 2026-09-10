@@ -1,16 +1,18 @@
 # 리딩버디 (Reading Buddy)
 
-초등 쌍둥이 자녀가 대화(음성/채팅)와 사진 촬영만으로 독서 기록을 남기고, '독서로'(read365.edunet.net)에 자동 반영하는 가족용 PWA.
+초등 쌍둥이 자녀가 대화(음성/채팅)와 사진 촬영만으로 독서 기록을 남기고, '독서로'(read365.edunet.net) 등록도 쉽게 도와주는 가족용 PWA.
 
 전체 요구사항은 [docs/PRD.md](docs/PRD.md) 참고. 자매 앱 `twin_choice`(같은 쌍둥이 자녀 대상 선택 기록 앱)와 인증/프로필 스키마를 공유하도록 설계했다(PRD 4.1).
 
 ## 기술 스택
 
 - **프론트엔드**: Next.js 14 (App Router) + TypeScript + Tailwind CSS, 모바일 웹(PWA)
+- **백엔드/API**: Next.js API 라우트(`src/app/api/**`) 하나로 통일 — 별도 Supabase Edge Functions/Azure Functions는 쓰지 않음
 - **DB/인증/스토리지**: Supabase (Postgres, Auth, Storage) — 무료 티어
-- **AI**: Azure OpenAI(질문 생성 + 감상문 생성), Azure AI Speech(STT), Azure AI Document Intelligence(OCR)
+- **AI**: Azure OpenAI(단계별 질문 코칭 + 감상문 3단 구성 생성), Azure AI Speech(STT), Azure AI Document Intelligence(OCR, 독서노트/표지 인식)
 - **도서 정보**: 카카오 도서 검색 API (알라딘 Open API로 대체/병행 가능, 현재 미연동)
-- **'독서로' 자동화**: Azure Functions + 브라우저 자동화(Playwright, 예정)
+- **'독서로' 연동**: 수동 등록 가이드(복사·바로가기·완료 표시) — 이용약관상 자동화 허용 여부 미확인이라 완전 자동화(크롤링)는 만들지 않음
+- **배포**: Vercel (아래 "배포" 섹션 참고)
 
 ## 시작하기
 
@@ -71,15 +73,30 @@ Supabase Auth로 로그인하는 건 **부모뿐**이다. 자녀는 부모 로�
 
 ```
 src/
-  app/                  App Router 페이지
+  app/
+    (auth)              /login, /signup, /profiles, /profiles/[id]/pin, /profiles/new
+    home/               자녀 홈 — 새 기록 시작, 내 배지, 최근 기록
+    read/                /read/new(방식 선택) → new/book(대화) | ocr/new(사진) → [id]/chat, [id]/review 등
+    records/            자녀 본인 기록 히스토리/상세 (/records, /records/[id])
+    settings/           부모 전용 — children/records/stats/badges
+    api/                Next.js API 라우트로 통일된 백엔드 (auth, children, reading-sessions,
+                        ocr-uploads, reading-records, book-cover-lookup, speech/transcribe)
   lib/
-    supabase/           client.ts(브라우저) / server.ts(RSC) / admin.ts(service role)
+    supabase/           client.ts(브라우저) / server.ts(RSC) / admin.ts(service role, RLS 우회)
     childAuth.ts         자녀 PIN → synthetic 계정 비밀번호 파생
+    azureOpenAI.ts       질문 생성(단계별 코칭)/감상문 생성/OCR·표지 텍스트 구조화
+    azureSpeech.ts       음성 답변 STT
+    documentIntelligence.ts  OCR (독서노트 사진, 표지 사진 둘 다)
+    kakaoBook.ts         책 검색(줄거리 컨텍스트 + 표지 인식 후보 목록)
+    readingSession.ts    대화 질문 개수/단계별 프레임워크 규칙
+    readingStats.ts      독서 통계 집계 헬퍼
+    badges.ts            배지 카탈로그/판정 로직
+    siblingReadingCounts.ts  형제자매 비교용 집계 전용 조회(서비스 역할)
     types.ts             테이블 타입
 supabase/
   migrations/           SQL 마이그레이션 (번호 순서대로 적용)
 docs/
-  PRD.md                제품 요구사항 문서
+  PRD.md                제품 요구사항 문서 (구현 중 결정된 사항은 "구현 노트"로 본문에 주석 처리)
 ```
 
 ## 다음 단계
