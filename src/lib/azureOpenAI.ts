@@ -199,3 +199,61 @@ export async function parseOcrRecord(rawText: string): Promise<ParsedOcrRecord> 
     content: input.content?.trim() || rawText,
   };
 }
+
+export interface CoverGuess {
+  title: string;
+  author: string | null;
+}
+
+// 표지 사진 OCR 원문(제목, 부제, 지은이, 출판사, 띠지 문구 등이 뒤섞여 있음)에서 "책 제목으로
+// 가장 유력한 것" 하나만 추려낸다. 이 추정치는 최종 확정이 아니라 카카오 도서 검색의 검색어로만
+// 쓰이고, 실제 후보 확정은 검색 결과를 사람이 골라서 한다 — 그래서 부제/지은이를 정확히 가려낼
+// 필요 없이 "검색했을 때 그 책이 나올 만한 제목"이면 충분하다.
+export async function guessCoverTitle(rawText: string): Promise<CoverGuess> {
+  if (!rawText.trim()) return { title: "", author: null };
+
+  try {
+    const response = await getClient().chat.completions.create({
+      model: process.env.AZURE_OPENAI_QUESTION_DEPLOYMENT!,
+      max_completion_tokens: 200,
+      messages: [
+        {
+          role: "system",
+          content: [
+            "너는 책 표지를 OCR로 인식한 텍스트에서 책 제목과 지은이를 추측하는 도우미다.",
+            "표지에는 제목, 부제, 지은이, 출판사, 추천사 등 여러 문구가 섞여 있다.",
+            "가장 크고 중심에 있을 법한 문구를 책 제목으로 고른다. 확신이 없어도 가장 유력한 후보를 고른다.",
+            "지은이로 보이는 이름이 있으면 author에 넣고, 없으면 빈 문자열로 둔다.",
+            "텍스트에 없는 내용을 새로 짓지 않는다.",
+          ].join("\n"),
+        },
+        { role: "user", content: rawText },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "guess_cover_title",
+            description: "표지 OCR 텍스트에서 책 제목과 지은이를 추측한다.",
+            parameters: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "가장 유력한 책 제목" },
+                author: { type: "string", description: "지은이 이름. 모르면 빈 문자열" },
+              },
+              required: ["title", "author"],
+            },
+          },
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "guess_cover_title" } },
+    });
+
+    const toolCall = response.choices[0]?.message?.tool_calls?.[0];
+    if (!toolCall || toolCall.type !== "function") return { title: "", author: null };
+    const input = JSON.parse(toolCall.function.arguments) as { title?: string; author?: string };
+    return { title: input.title?.trim() ?? "", author: input.author?.trim() || null };
+  } catch {
+    return { title: "", author: null };
+  }
+}

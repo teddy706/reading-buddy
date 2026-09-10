@@ -4,6 +4,14 @@ interface KakaoBookDocument {
   title: string;
   authors: string[];
   contents: string;
+  thumbnail?: string;
+}
+
+export interface BookCandidate {
+  title: string;
+  author: string | null;
+  thumbnail: string | null;
+  description: string | null;
 }
 
 // 책 제목으로 줄거리 요약을 가져와 질문 생성 프롬프트의 컨텍스트로 쓴다(PRD 6.4) — AI 내장
@@ -32,5 +40,30 @@ export async function fetchBookContext(title: string, author: string | null): Pr
     return best.contents?.trim().slice(0, 600) || null;
   } catch {
     return null;
+  }
+}
+
+// 표지 촬영 자동 인식(Phase 2 C)에서 쓴다. OCR+AI로 뽑아낸 제목 추정치는 오탈자가 섞일 수
+// 있어서 하나로 단정하지 않고, 후보 몇 개를 돌려줘 아이/부모가 직접 골라 확정하게 한다.
+export async function searchBooks(query: string, size = 5): Promise<BookCandidate[]> {
+  const key = process.env.KAKAO_REST_API_KEY;
+  if (!key || !query.trim()) return [];
+
+  try {
+    const params = new URLSearchParams({ query: query.trim(), size: String(size) });
+    const response = await fetch(`https://dapi.kakao.com/v3/search/book?${params}`, {
+      headers: { Authorization: `KakaoAK ${key}` },
+    });
+    if (!response.ok) return [];
+
+    const data = (await response.json()) as { documents?: KakaoBookDocument[] };
+    return (data.documents ?? []).map((d) => ({
+      title: d.title,
+      author: d.authors?.[0] ?? null,
+      thumbnail: d.thumbnail || null,
+      description: d.contents?.trim().slice(0, 200) || null,
+    }));
+  } catch {
+    return [];
   }
 }
