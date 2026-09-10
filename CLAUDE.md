@@ -22,7 +22,7 @@
 | AI — 질문 생성 | Azure OpenAI 저지연 경량 모델(`AZURE_OPENAI_QUESTION_DEPLOYMENT`) — 대화 흐름이 끊기지 않도록 응답 속도 우선. gpt-4o-mini는 단종되어 실제로는 `gpt-5.4-mini`를 배포함(2026-09-10 기준). 이 "경량 모델" 자리는 시점마다 후속 모델로 계속 바뀔 수 있으니 배포 전 Foundry 모델 카탈로그에서 현재 사용 가능한 모델을 확인할 것 |
 | AI — 감상문 생성 | Azure OpenAI 상위 품질 모델(`AZURE_OPENAI_ESSAY_DEPLOYMENT`, 실제 배포: `gpt-4o`) — 세션당 1회 호출이라 속도보다 문장 품질 우선 |
 | AI 생성 감상문 윤리 | 아이가 답변하지 않은 내용을 임의로 창작하지 않는다. 감상문은 아이 답변의 재구성이며, 원본 대화 로그(`conversation_sessions.messages`)를 항상 함께 보관해 부모가 대조 확인 가능하게 함 |
-| 책 정보 조회 | 알라딘/카카오 도서 API로 줄거리 요약만 가져와 프롬프트 컨텍스트로 사용. **AI 내장 웹검색 도구는 호출당 토큰 비용이 커서 사용하지 않음** (PRD 6.4) |
+| 책 정보 조회 | 카카오 도서 검색 API(`src/lib/kakaoBook.ts`)로 줄거리 요약만 가져와 질문 생성 프롬프트 컨텍스트로 사용. 조회 실패/결과 없음은 에러 없이 null 처리(제목/저자만으로 폴백). **AI 내장 웹검색 도구는 호출당 토큰 비용이 커서 사용하지 않음** (PRD 6.4). 알라딘은 미연동(카카오만으로 충분 판단) |
 | 비용 정책 | Supabase는 무료 티어 유지, Azure AI는 월 $150 예산 내에서 Standard(S0) 등 유료 티어를 품질 우선으로 사용 (PRD 6.5) |
 | 확장성 원칙 | 전 테이블 `family_id` 기반. 코드에 "가족은 하나뿐"이라는 가정(하드코딩된 family_id, 환경변수 등)을 절대 심지 않을 것 |
 | PIN 잠금 정책 | 5회 연속 실패 시 1분 잠금(`profiles.pin_fail_count`/`pin_locked_until`, `src/lib/childAuth.ts`의 `PIN_MAX_ATTEMPTS`/`PIN_LOCK_DURATION_MS`). PRD 3.1 확정 사항 — twin_choice에는 없는 재량 추가 |
@@ -42,15 +42,15 @@
 - [x] `.env.local.example`, README, PRD 문서화
 - [x] GitHub private 저장소 생성
 - [x] **Supabase 프로젝트 실제 생성 및 마이그레이션 적용 완료** — `teddy706's Org` 조직, 프로젝트명 `reading-buddy`, 리전 ap-northeast-2(Seoul), URL `https://ebtlnygmfmglwxpcqczz.supabase.co`. `.env.local`에 실제 키 반영 완료(gitignored). 테이블 6개 + RLS 정책(families 1/profiles 1/conversation_sessions 3/ocr_uploads 3/reading_records 3) + storage 정책 2개 + `reading-notes` 버킷까지 SQL Editor에서 직접 실행/검증함. `dokseoro_credentials`는 의도대로 정책 0개(완전 차단)
-- [x] **Azure 리소스 실제 생성 및 연결 확인 완료** — 전부 리소스 그룹 `RG-reading-buddy`(Korea Central) 아래: `reading-buddy-openai`(Azure OpenAI, 배포 `gpt-4o`/`gpt-5.4-mini` 둘 다 `curl`로 실제 채팅 호출 성공 확인), `reading-buddy-speech`(Azure AI Speech, 토큰 발급 확인), `reading-buddy-docintel`(Document Intelligence, `/documentintelligence/info` 확인). `.env.local`에 전부 반영 완료. 알라딘/카카오 도서 API 키만 아직 미설정
-- [ ] 알라딘/카카오 도서 API 키는 아직 미설정 (`.env.local`에 플레이스홀더로 남아있음) — Phase 1 "2. 대화 기반 독서 기록" 착수 시 채울 것
+- [x] **Azure 리소스 실제 생성 및 연결 확인 완료** — 전부 리소스 그룹 `RG-reading-buddy`(Korea Central) 아래: `reading-buddy-openai`(Azure OpenAI, 배포 `gpt-4o`/`gpt-5.4-mini` 둘 다 `curl`로 실제 채팅 호출 성공 확인), `reading-buddy-speech`(Azure AI Speech, 토큰 발급 확인), `reading-buddy-docintel`(Document Intelligence, `/documentintelligence/info` 확인). `.env.local`에 전부 반영 완료
+- [x] **카카오 도서 검색 API 연동 완료** — Kakao Developers 앱 "리딩버디"(ID 1573541) 생성, REST API 키를 `.env.local`의 `KAKAO_REST_API_KEY`에 반영, `src/lib/kakaoBook.ts`로 대화 질문 생성에 연결(아래 Phase 1 2번 참고). 알라딘은 미연동
 
 ## Phase 1 진행 순서 (PRD 5.2 기준)
 
 번호 순서대로 하나씩 진행할 것. 앞 번호가 안 끝났으면 뒷 번호에 먼저 손대지 말 것.
 
 - [x] **1. 계정/인증**: 부모 회원가입/로그인(`/signup`, `/login`), 자녀 프로필 생성 UI(`/profiles/new`), 프로필 선택(`/profiles`) → PIN 입력(`/profiles/[id]/pin`) → 세션 전환 → 자녀 홈(`/home`) 흐름 구현 및 실제 브라우저로 전체 플로우(가입→프로필 생성→PIN 성공/실패/5회 잠금→나가기→재로그인→PIN 재설정)까지 테스트 완료. 부모 설정(`/settings/children`)에서 이름/아바타 수정 + PIN 재설정 가능
-- [x] **2. 대화 기반 독서 기록**: `/read/new`(기록 방식 선택, OCR 카드는 비활성) → `/read/new/book`(책 제목/저자 입력) → `/read/[id]/chat`(대화 진행, 텍스트+음성 입력, N/4 진행 표시, "그만할래") → `/read/[id]/review`(감상문 생성/편집, 원본 대화 펼쳐보기, 저장) → `/home`에 반영. `src/lib/azureOpenAI.ts`(`generateNextQuestion`/`generateEssay`, gpt-5.4-mini/gpt-4o, `max_completion_tokens` 사용)와 `src/lib/azureSpeech.ts`(음성 답변 STT, REST 단문 인식 엔드포인트)로 구현. 실제 브라우저로 텍스트 답변 4턴 → 감상문 생성 → 저장까지 end-to-end 확인, DB에 `reading_records`(dokseoro_status=pending) + `conversation_sessions`(status=completed) 생성됨을 SQL로 검증함. **음성 입력(🎤 버튼)은 자동화 브라우저에 마이크가 없어 직접 테스트 못 함 — 실제 기기에서 확인 필요**. 알라딘/카카오 도서 API 연동(줄거리 기반 질문 컨텍스트, PRD 6.4)은 키가 없어 이번엔 제외 — 나중에 키가 생기면 `generateNextQuestion`의 시스템 프롬프트에 책 정보 요약을 추가하는 형태로 확장할 것
+- [x] **2. 대화 기반 독서 기록**: `/read/new`(기록 방식 선택, OCR 카드는 비활성) → `/read/new/book`(책 제목/저자 입력) → `/read/[id]/chat`(대화 진행, 텍스트+음성 입력, N/4 진행 표시, "그만할래") → `/read/[id]/review`(감상문 생성/편집, 원본 대화 펼쳐보기, 저장) → `/home`에 반영. `src/lib/azureOpenAI.ts`(`generateNextQuestion`/`generateEssay`, gpt-5.4-mini/gpt-4o, `max_completion_tokens` 사용)와 `src/lib/azureSpeech.ts`(음성 답변 STT, REST 단문 인식 엔드포인트)로 구현. 실제 브라우저로 텍스트 답변 4턴 → 감상문 생성 → 저장까지 end-to-end 확인, DB에 `reading_records`(dokseoro_status=pending) + `conversation_sessions`(status=completed) 생성됨을 SQL로 검증함. **음성 입력(🎤 버튼)은 자동화 브라우저에 마이크가 없어 직접 테스트 못 함 — 실제 기기에서 확인 필요**. 카카오 도서 검색 API로 줄거리 요약을 가져와 질문 생성 컨텍스트로 사용하도록 이후 추가 완료(`fetchBookContext`, `next-question` 라우트에서 매 턴 호출) — "해리포터와 마법사의 돌"로 실제 브라우저 테스트해 대화 진행/감상문 생성까지 정상 확인
 - [ ] **3. 독서노트 OCR 입력**: 사진 촬영 → Document Intelligence OCR → 결과 확인/수정 UI (와이어프레임: docs/PRD.md 9.6). "확인"이 아니라 "수정"이 기본 동작이어야 함
 - [ ] **4. '독서로' 자동 연동**: 로그인 방식 확인 후 착수. Playwright 기반 자동화 + 실패 시 수동 등록 가이드 폴백 필수
 - [ ] **5. 기록 관리**: 자녀별 기록 리스트/히스토리, 부모 대시보드(두 자녀 기록 현황 + 프로필/PIN 관리) — `/home`은 현재 빈 목록 placeholder만 있음

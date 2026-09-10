@@ -9,7 +9,7 @@
 - **프론트엔드**: Next.js 14 (App Router) + TypeScript + Tailwind CSS, 모바일 웹(PWA)
 - **DB/인증/스토리지**: Supabase (Postgres, Auth, Storage) — 무료 티어
 - **AI**: Azure OpenAI(질문 생성 + 감상문 생성), Azure AI Speech(STT), Azure AI Document Intelligence(OCR)
-- **도서 정보**: 알라딘 Open API / 카카오 도서 검색 API
+- **도서 정보**: 카카오 도서 검색 API (알라딘 Open API로 대체/병행 가능, 현재 미연동)
 - **'독서로' 자동화**: Azure Functions + 브라우저 자동화(Playwright, 예정)
 
 ## 시작하기
@@ -75,7 +75,7 @@ docs/
 
 ## 다음 단계
 
-Phase 1의 "1. 계정/인증"과 "2. 대화 기반 독서 기록"(책 정보 입력 → AI 질문 생성 → 텍스트/음성 답변 → 감상문 생성 → 저장, `/read/**`)은 구현·테스트 완료. Supabase/Azure 인프라도 모두 실제로 생성하고 연결 확인까지 마쳤다. 음성 입력은 자동화 브라우저로는 마이크 테스트가 불가능해서 실제 기기 확인이 아직 안 됐다. 다음은 [CLAUDE.md](CLAUDE.md)의 "Phase 1 진행 순서" 3번(독서노트 OCR 입력)부터.
+Phase 1의 "1. 계정/인증"과 "2. 대화 기반 독서 기록"(책 정보 입력 → 카카오 도서 검색으로 줄거리 조회 → AI 질문 생성 → 텍스트/음성 답변 → 감상문 생성 → 저장, `/read/**`)은 구현·테스트 완료. Supabase/Azure 인프라와 카카오 도서 API도 모두 실제로 연결 확인까지 마쳤다. 음성 입력은 자동화 브라우저로는 마이크 테스트가 불가능해서 실제 기기 확인이 아직 안 됐다. 다음은 [CLAUDE.md](CLAUDE.md)의 "Phase 1 진행 순서" 3번(독서노트 OCR 입력)부터.
 
 PRD 10절 기준 별도 확인 필요 사항:
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateNextQuestion } from "@/lib/azureOpenAI";
+import { fetchBookContext } from "@/lib/kakaoBook";
 import { TOTAL_QUESTIONS } from "@/lib/readingSession";
 import type { ConversationMessage } from "@/lib/types";
 
@@ -38,9 +39,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json({ done: true, messages });
   }
 
+  const bookContext = await fetchBookContext(session.book_title, session.book_author);
+
   const question = await generateNextQuestion({
     bookTitle: session.book_title,
     bookAuthor: session.book_author,
+    bookContext,
     history: messages,
     questionIndex: answeredCount,
   });

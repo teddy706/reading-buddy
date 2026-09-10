@@ -31,10 +31,11 @@ function toChatMessages(history: ConversationMessage[]) {
 export async function generateNextQuestion(params: {
   bookTitle: string;
   bookAuthor: string | null;
+  bookContext: string | null;
   history: ConversationMessage[];
   questionIndex: number;
 }): Promise<string | null> {
-  const { bookTitle, bookAuthor, history, questionIndex } = params;
+  const { bookTitle, bookAuthor, bookContext, history, questionIndex } = params;
 
   try {
     const response = await getClient().chat.completions.create({
@@ -46,10 +47,16 @@ export async function generateNextQuestion(params: {
           content: [
             "너는 초등학교 3학년 아이와 방금 읽은 책에 대해 짧게 대화하며 독서 기록을 도와주는 도우미다.",
             `아이가 읽은 책: "${bookTitle}"${bookAuthor ? ` (저자: ${bookAuthor})` : ""}`,
+            ...(bookContext ? [`책 줄거리 요약(참고용, 아이에게 그대로 알려주지 말 것): ${bookContext}`] : []),
             "아이의 직전 답변을 참고해서, 그 답변을 더 구체적으로 풀어낼 수 있는 다음 질문 하나만 만들어라.",
+            bookContext
+              ? "줄거리 요약에 나오는 사건이나 등장인물을 활용해 더 구체적인 질문을 만들어도 좋다."
+              : "",
             "질문은 한 문장, 짧고 쉬운 말투(반말, 친구처럼)로 쓴다. 이모지는 쓰지 않는다.",
             "아직 답변이 없으면(첫 질문이면) 책에서 재미있었던 부분을 묻는 질문으로 시작한다.",
-          ].join("\n"),
+          ]
+            .filter(Boolean)
+            .join("\n"),
         },
         ...toChatMessages(history),
       ],
