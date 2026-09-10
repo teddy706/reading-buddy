@@ -3,6 +3,7 @@ import { requireChildProfile } from "@/lib/currentProfile";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
 import { LogoutButton } from "@/components/LogoutButton";
+import { RecordCard } from "@/components/RecordCard";
 import type { ConversationSession, ReadingRecord } from "@/lib/types";
 
 export default async function HomePage() {
@@ -21,7 +22,7 @@ export default async function HomePage() {
     .select("*")
     .eq("child_profile_id", child.id)
     .order("recorded_at", { ascending: false })
-    .limit(10);
+    .limit(5);
 
   const sessions = (inProgress ?? []) as ConversationSession[];
   const readingRecords = (records ?? []) as ReadingRecord[];
@@ -47,15 +48,17 @@ export default async function HomePage() {
         </Link>
       ))}
 
+      <div className="mb-2 flex items-center justify-between">
+        <p className="font-bold">최근 기록</p>
+        <Link href="/records" className="text-sm font-semibold text-accent underline">
+          전체 보기
+        </Link>
+      </div>
+
       {readingRecords.length === 0 ? (
         <div className="card text-center text-sm text-soft">아직 기록한 책이 없어요.</div>
       ) : (
-        readingRecords.map((r) => (
-          <div key={r.id} className="card">
-            <p className="font-bold">{r.book_title}</p>
-            <p className="text-sm text-soft">{r.recorded_at}</p>
-          </div>
-        ))
+        readingRecords.map((r) => <RecordCard key={r.id} record={r} />)
       )}
     </div>
   );
