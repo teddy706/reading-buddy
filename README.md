@@ -54,6 +54,15 @@ npm run dev
 
 각 리소스의 "키 및 엔드포인트"에서 값을 `.env.local`에 복사.
 
+### 배포 (Vercel)
+
+**프로덕션**: https://reading-buddy-ten.vercel.app (Vercel 프로젝트 `teddy706s-projects/reading-buddy`)
+
+1. [vercel.com/new](https://vercel.com/new) → GitHub의 `reading-buddy` 저장소 Import (Next.js 자동 인식, 별도 설정 불필요)
+2. "Environment Variables" 섹션에서 `.env.local`의 모든 변수(`ALADIN_API_KEY` 제외 — 미사용)를 "paste the .env contents"로 한 번에 붙여넣기. Environments는 기본값(Production and Preview) 유지
+3. Deploy. 이후 `main` 브랜치에 push할 때마다 Vercel이 자동으로 재배포함(별도 CI 설정 불필요)
+4. 로컬 코드에 localhost 하드코딩이 없어(미들웨어/쿠키는 요청 host 기준으로 동작) 배포 시 추가 코드 수정 불필요했음
+
 ### 인증 구조 (중요)
 
 Supabase Auth로 로그인하는 건 **부모뿐**이다. 자녀는 부모 로그인 세션 안에서 프로필(PIN)로 전환하지만, 내부적으로는 `child+{profileId}@child.reading-buddy.internal` 형태의 synthetic 계정으로 실제 Supabase Auth 세션을 발급받는다(`src/lib/childAuth.ts`). 그래야 `auth.uid()` 기반 RLS가 "같은 가족인가"뿐 아니라 "쌍둥이 중 누구의 프로필인가"까지 DB 레벨에서 강제된다. 자세한 배경은 [CLAUDE.md](CLAUDE.md)와 [docs/PRD.md](docs/PRD.md) 9.1 참고.

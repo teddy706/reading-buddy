@@ -58,7 +58,7 @@
 
 PRD 4.2 "MVP 이후 로드맵" 후보 중 사용자가 명시적으로 아래 4개를 선택함. '독서로' 완전 자동화(Playwright)는 이번에 선택하지 않았으므로 계속 보류(4번 항목 참고, 이용약관 확인 전까지 수동 가이드 유지). Phase 1과 마찬가지로 **한 번에 하나씩, 사용자가 지정하는 순서대로 진행** — 임의로 다음 항목에 손대지 말 것.
 
-- [ ] **A. Vercel 배포**: 지금까지는 로컬 dev 서버로만 개발/테스트함. 실제 기기(특히 아직 검증 못 한 🎤 음성 입력)로 써보려면 배포가 필요. PRD 6.2는 "Azure Static Web Apps 또는 Vercel"을 호스팅 후보로 뒀는데, 사용자가 Vercel을 명시적으로 선택함. `.env.local`의 모든 환경변수를 Vercel 프로젝트 설정에 옮겨야 함(Supabase/Azure OpenAI/Speech/Document Intelligence/Kakao 키 전부)
+- [x] **A. Vercel 배포**: `github.com/teddy706/reading-buddy`를 Vercel(`teddy706's projects` 팀)에 Import → Next.js 프레임워크 자동 인식 → 프로덕션 도메인 발급 완료: **https://reading-buddy-ten.vercel.app**. `main` 브랜치에 push할 때마다 자동 재배포(Vercel의 GitHub 연동 기본 동작, 별도 CI 설정 불필요). 환경변수는 `.env.local`의 15개(ALADIN_API_KEY 제외, 미사용) 전부를 Vercel "Environment Variables"의 "paste the .env contents"로 한 번에 등록(Production and Preview 스코프) — **API 키가 들어가는 입력은 에이전트가 대신 채우지 않고 사용자가 직접 붙여넣음**. 배포 후 프로덕션 URL에서 회원가입 → `/profiles` 진입까지 실제 브라우저로 end-to-end 확인(서버 사이드 Supabase service-role 호출이 Vercel 환경에서도 정상 동작함을 증명), 테스트 계정은 정리 완료. `next.config.mjs`/`middleware.ts`에 localhost 하드코딩이 없어 별도 코드 수정 없이 배포됨. PWA `manifest.json`은 있지만 `icons: []`라 실제 설치 아이콘은 비어있음(후속 개선 여지, 우선순위 아님)
 - [ ] **B. 독서 통계/리포트**: 월간 독서량, 장르 분포 등을 부모 대시보드에 리포트. 이미 쌓인 `reading_records` 테이블 데이터로 바로 시작 가능, 새 외부 API 불필요 — 4개 중 가장 착수 부담이 적음
 - [ ] **C. 표지 촬영 자동 인식**: `/read/new/book`에서 책 제목을 직접 입력하는 대신 표지 사진으로 책 정보 자동 매칭. 접근 방식(ISBN 바코드 스캔 vs 표지 이미지 OCR로 제목 인식 후 카카오 도서 검색 API 매칭 등) 설계 필요 — 착수 전에 먼저 방식을 정할 것
 - [ ] **D. 형제자매 비교/배지·스탬프**: 쌍둥이 간 선의의 경쟁 요소. 배지 규칙(무엇을 달성하면 어떤 배지인지), 새 테이블(예: `badges`/`badge_awards`) 설계 필요 — 4개 중 설계 범위가 가장 넓음
