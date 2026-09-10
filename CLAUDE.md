@@ -39,6 +39,8 @@
 - [x] DB 스키마/RLS/스토리지 마이그레이션 (`supabase/migrations/0001~0004`)
 - [x] `.env.local.example`, README, PRD 문서화
 - [x] GitHub private 저장소 생성
+- [x] **Supabase 프로젝트 실제 생성 및 마이그레이션 적용 완료** — `teddy706's Org` 조직, 프로젝트명 `reading-buddy`, 리전 ap-northeast-2(Seoul), URL `https://ebtlnygmfmglwxpcqczz.supabase.co`. `.env.local`에 실제 키 반영 완료(gitignored). 테이블 6개 + RLS 정책(families 1/profiles 1/conversation_sessions 3/ocr_uploads 3/reading_records 3) + storage 정책 2개 + `reading-notes` 버킷까지 SQL Editor에서 직접 실행/검증함. `dokseoro_credentials`는 의도대로 정책 0개(완전 차단)
+- [ ] Azure OpenAI / Speech / Document Intelligence / 알라딘·카카오 도서 API 키는 아직 미설정 (`.env.local`에 플레이스홀더로 남아있음) — Phase 1 해당 기능 착수 시 채울 것
 
 ## Phase 1 진행 순서 (PRD 5.2 기준, 아직 시작 전)
 
