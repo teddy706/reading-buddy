@@ -4,11 +4,12 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AVATAR_OPTIONS } from "@/components/Avatar";
-import { PinDots, PinKeypad } from "@/components/PinKeypad";
+import { PinDots, PinKeypad, PinConfirmButton } from "@/components/PinKeypad";
 import { AVATAR_PHOTO_BUCKET, avatarPhotoPath } from "@/lib/avatarPhoto";
 import type { Profile } from "@/lib/types";
 
 type PinStep = "closed" | "enter" | "confirm";
+type DeleteStep = "closed" | "confirm";
 
 export function ChildEditCard({ child, photoUrl }: { child: Profile; photoUrl: string | null }) {
   const router = useRouter();
@@ -22,7 +23,11 @@ export function ChildEditCard({ child, photoUrl }: { child: Profile; photoUrl: s
   const [pin, setPin] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
   const [pinError, setPinError] = useState<string | null>(null);
+  const [pinSubmitting, setPinSubmitting] = useState(false);
   const [pinDone, setPinDone] = useState(false);
+  const [deleteStep, setDeleteStep] = useState<DeleteStep>("closed");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function saveProfile(next: { name?: string; avatar?: string; avatarPhotoPath?: string | null }) {
     setSavingProfile(true);
@@ -85,34 +90,66 @@ export function ChildEditCard({ child, photoUrl }: { child: Profile; photoUrl: s
   function onPinChange(next: string) {
     setPinError(null);
     setPin(next);
-    if (next.length === 4) setTimeout(() => setPinStep("confirm"), 150);
   }
 
-  async function onPinConfirmChange(next: string) {
+  function goToPinConfirm() {
+    if (pin.length !== 4) return;
+    setPinStep("confirm");
+  }
+
+  function onPinConfirmChange(next: string) {
     setPinError(null);
     setPinConfirm(next);
-    if (next.length !== 4) return;
-    if (next !== pin) {
+  }
+
+  async function submitPinReset() {
+    if (pinConfirm.length !== 4) return;
+    if (pinConfirm !== pin) {
       setPinError("PIN이 서로 달라요. 다시 입력해주세요.");
       setPinConfirm("");
       return;
     }
-    const res = await fetch(`/api/children/${child.id}/reset-pin`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pin }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setPinError(data.error ?? "PIN을 변경하지 못했어요.");
-      setPinStep("enter");
-      setPin("");
-      setPinConfirm("");
-      return;
+    setPinSubmitting(true);
+    try {
+      const res = await fetch(`/api/children/${child.id}/reset-pin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPinError(data.error ?? "PIN을 변경하지 못했어요.");
+        setPinStep("enter");
+        setPin("");
+        setPinConfirm("");
+        return;
+      }
+      setPinDone(true);
+      setTimeout(() => setPinStep("closed"), 1200);
+    } finally {
+      setPinSubmitting(false);
     }
-    setPinDone(true);
-    setTimeout(() => setPinStep("closed"), 1200);
   }
+
+  async function deleteChild() {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/children/${child.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        setDeleteError(data.error ?? "삭제하지 못했어요.");
+        setDeleting(false);
+        return;
+      }
+      router.refresh();
+    } catch {
+      setDeleteError("삭제하지 못했어요.");
+      setDeleting(false);
+    }
+  }
+
+  const pinCurrentValue = pinStep === "confirm" ? pinConfirm : pin;
 
   return (
     <div className="card">
@@ -145,10 +182,11 @@ export function ChildEditCard({ child, photoUrl }: { child: Profile; photoUrl: s
         />
       </div>
 
+      {photoLoading && <p className="mb-2 text-xs font-semibold text-soft">사진 처리하는 중...</p>}
       {photoError && <p className="mb-2 text-sm font-semibold text-red-500">{photoError}</p>}
-      {photoUrl && (
-        <button type="button" onClick={removePhoto} disabled={photoLoading} className="btn btn-ghost mb-2">
-          {photoLoading ? "처리하는 중..." : "사진 제거하고 이모지로"}
+      {photoUrl && !photoLoading && (
+        <button type="button" onClick={removePhoto} className="btn btn-ghost mb-2">
+          사진 제거하고 이모지로
         </button>
       )}
 
@@ -186,17 +224,64 @@ export function ChildEditCard({ child, photoUrl }: { child: Profile; photoUrl: s
               <p className="mb-3 text-center text-sm font-semibold">
                 {pinStep === "confirm" ? "PIN을 한 번 더 입력해주세요" : "새 PIN 4자리를 입력해주세요"}
               </p>
-              <PinDots length={4} filled={pinStep === "confirm" ? pinConfirm.length : pin.length} />
+              <PinDots length={4} filled={pinCurrentValue.length} />
               {pinError && <p className="mb-3 text-center text-sm font-semibold text-red-500">{pinError}</p>}
               <PinKeypad
-                value={pinStep === "confirm" ? pinConfirm : pin}
+                value={pinCurrentValue}
                 onChange={pinStep === "confirm" ? onPinConfirmChange : onPinChange}
+                disabled={pinSubmitting}
               />
-              <button type="button" onClick={() => setPinStep("closed")} className="btn btn-ghost mb-0 mt-2">
+              <PinConfirmButton
+                ready={pinCurrentValue.length === 4}
+                loading={pinSubmitting}
+                onClick={pinStep === "confirm" ? submitPinReset : goToPinConfirm}
+                label={pinStep === "confirm" ? "완료" : "다음"}
+              />
+              <button
+                type="button"
+                onClick={() => setPinStep("closed")}
+                disabled={pinSubmitting}
+                className="btn btn-ghost mb-0 mt-2"
+              >
                 취소
               </button>
             </>
           )}
+        </div>
+      )}
+
+      {deleteStep === "closed" ? (
+        <button
+          type="button"
+          onClick={() => setDeleteStep("confirm")}
+          className="btn btn-ghost mb-0 mt-2 text-red-500"
+        >
+          자녀 프로필 삭제
+        </button>
+      ) : (
+        <div className="mt-2 rounded-2xl border-2 border-red-200 bg-red-50 p-4">
+          <p className="mb-3 text-center text-sm font-semibold text-red-600">
+            {child.name}의 프로필과 독서 기록이 전부 사라져요. 되돌릴 수 없어요.
+          </p>
+          {deleteError && <p className="mb-3 text-center text-sm font-semibold text-red-500">{deleteError}</p>}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setDeleteStep("closed")}
+              disabled={deleting}
+              className="btn btn-ghost mb-0 flex-1"
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={deleteChild}
+              disabled={deleting}
+              className="btn mb-0 flex-1 bg-red-500 text-white disabled:opacity-50"
+            >
+              {deleting ? "삭제하는 중..." : "정말 삭제할래요"}
+            </button>
+          </div>
         </div>
       )}
     </div>

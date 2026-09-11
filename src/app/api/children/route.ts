@@ -62,5 +62,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "프로필 계정을 연결하지 못했어요." }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, profile: { id: profile.id, name: profile.name, avatar: profile.avatar } });
+  return NextResponse.json({
+    ok: true,
+    profile: { id: profile.id, name: profile.name, avatar: profile.avatar, family_id: profile.family_id },
+  });
 }

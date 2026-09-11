@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { PinDots, PinKeypad } from "@/components/PinKeypad";
+import { PinDots, PinKeypad, PinConfirmButton } from "@/components/PinKeypad";
 
 export function PinEntry({ profileId }: { profileId: string }) {
   const router = useRouter();
@@ -27,18 +27,20 @@ export function PinEntry({ profileId }: { profileId: string }) {
     return () => clearInterval(timer);
   }, [lockedForSec]);
 
-  async function onChange(next: string) {
+  function onChange(next: string) {
     if (lockedForSec > 0) return;
     setError(null);
     setPin(next);
-    if (next.length !== 4) return;
+  }
 
+  async function submit() {
+    if (pin.length !== 4 || lockedForSec > 0 || loading) return;
     setLoading(true);
     try {
       const res = await fetch(`/api/children/${profileId}/pin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin: next }),
+        body: JSON.stringify({ pin }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -69,6 +71,7 @@ export function PinEntry({ profileId }: { profileId: string }) {
         error && <p className="mb-4 text-center text-sm font-semibold text-red-500">{error}</p>
       )}
       <PinKeypad value={pin} onChange={onChange} disabled={loading || lockedForSec > 0} />
+      <PinConfirmButton ready={pin.length === 4 && lockedForSec === 0} loading={loading} onClick={submit} />
       <Link href="/settings/children" className="mt-6 block text-center text-sm text-soft underline">
         PIN을 잊어버렸어요
       </Link>

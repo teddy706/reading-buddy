@@ -42,6 +42,29 @@ export function PinKeypad({
   );
 }
 
+// PIN 4자리를 다 입력해도 곧바로 서버에 보내지 않고 이 버튼을 눌러야 넘어가게 한다 —
+// 자동 제출은 응답이 오기 전까지 화면이 멈춘 것처럼 보여 아이가 "눌렀는데 안 되나?" 하고
+// 다시 누르게 되는 문제가 있었다(사용자 피드백). 로딩 중엔 버튼 라벨로 진행 상태를 보여준다.
+export function PinConfirmButton({
+  ready,
+  loading,
+  onClick,
+  label = "확인",
+  loadingLabel = "확인하는 중...",
+}: {
+  ready: boolean;
+  loading?: boolean;
+  onClick: () => void;
+  label?: string;
+  loadingLabel?: string;
+}) {
+  return (
+    <button type="button" onClick={onClick} disabled={!ready || loading} className="btn btn-primary mt-2 mb-0">
+      {loading ? loadingLabel : label}
+    </button>
+  );
+}
+
 export function PinDots({ length, filled }: { length: number; filled: number }) {
   return (
     <div className="mb-6 flex justify-center gap-3">

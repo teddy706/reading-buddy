@@ -48,3 +48,44 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
   return NextResponse.json({ ok: true });
 }
+
+// 부모 전용: 자녀 프로필 완전 삭제. auth 계정을 지우면 profiles.user_id의
+// on delete cascade(0001_schema.sql)로 프로필 row와 그 아래 reading_records/
+// conversation_sessions/ocr_uploads까지 전부 함께 지워진다 — 되돌릴 수 없다.
+export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
+  const parent = await getCurrentProfile();
+  if (!parent) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
+  if (parent.role !== "parent") return NextResponse.json({ error: "부모만 할 수 있어요." }, { status: 403 });
+
+  const admin = createAdminClient();
+
+  const { data: child } = await admin
+    .from("profiles")
+    .select("id, user_id, avatar_photo_path")
+    .eq("id", params.id)
+    .eq("family_id", parent.family_id)
+    .eq("role", "child")
+    .maybeSingle();
+
+  if (!child) {
+    return NextResponse.json({ error: "자녀를 찾을 수 없어요." }, { status: 404 });
+  }
+
+  if (child.avatar_photo_path) {
+    await admin.storage.from(AVATAR_PHOTO_BUCKET).remove([child.avatar_photo_path]);
+  }
+
+  if (child.user_id) {
+    const { error: deleteUserError } = await admin.auth.admin.deleteUser(child.user_id);
+    if (deleteUserError) {
+      return NextResponse.json({ error: "삭제하지 못했어요." }, { status: 500 });
+    }
+  } else {
+    const { error: deleteProfileError } = await admin.from("profiles").delete().eq("id", child.id);
+    if (deleteProfileError) {
+      return NextResponse.json({ error: "삭제하지 못했어요." }, { status: 500 });
+    }
+  }
+
+  return NextResponse.json({ ok: true });
+}
