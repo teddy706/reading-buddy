@@ -85,6 +85,16 @@ PRD 4.2 "MVP 이후 로드맵" 후보 중 사용자가 명시적으로 아래 4�
 - **신형 모델은 `max_tokens` 대신 `max_completion_tokens`를 요구한다**: `gpt-5.4-mini`에 `max_tokens`를 보내면 400 `unsupported_parameter` 에러가 난다. `gpt-4o`는 두 파라미터 다 허용하므로, 두 배포 모두 `max_completion_tokens`로 통일해서 호출할 것 (Phase 1 "2. 대화 기반 독서 기록" 구현 시 `src/lib/azureOpenAI.ts`에 반영)
 - Azure OpenAI의 TPM 할당량은 **리소스가 아니라 "구독+리전+모델" 단위로 공유**된다 — 같은 구독의 다른 리소스(`twin_choice`의 `twin`)가 같은 리전에서 이미 어떤 모델의 할당량을 쓰고 있으면, 새 리소스에서 그 모델을 기본 용량(예: 250K TPM)으로 배포하려 할 때 실패할 수 있다. 배포 전 Foundry 포털의 "할당량" 페이지에서 남은 양을 확인하거나, 배포 시 "사용자 지정"으로 용량을 낮출 것
 
+## 페이지 전환 속도 개선 (2026-09-11)
+
+사용자가 실제 기기에서 "확인 누르고 다음 화면 넘어가는 게 느리다"고 피드백(twin_choice에서도 같은 걸 느꼈다고 함 — 같은 인증 패턴을 재사용하는 자매 앱이라 원인이 같을 가능성이 높음). 원인 3가지를 찾아 전부 조치함:
+
+1. **가장 큰 원인 — Vercel 서버 함수 리전과 Supabase 리전 불일치.** `curl -X POST .../api/children`의 `x-vercel-id` 응답 헤더가 `icn1::iad1::...`로 나옴 — 요청은 서울(icn1) 엣지로 들어오지만 실제 Node 서버 함수는 버지니아(iad1)에서 실행되고 있었다. Supabase 프로젝트는 서울(ap-northeast-2)이라, 서버 컴포넌트 하나가 렌더링될 때마다 안에서 만드는 모든 Supabase 호출이 한국→미국→서울→미국→한국을 왕복한다. `vercel.json`에 `{"regions": ["icn1"]}`을 추가해 서버 함수를 서울로 고정함 — Hobby(무료) 플랜에서 이 설정이 실제로 반영되는지는 다음 배포 후 `x-vercel-id`로 재확인 필요(반영 안 되면 Vercel 프로젝트 설정 → Functions → Function Region에서 수동 지정).
+2. **페이지마다 Supabase 조회를 순서대로 하나씩 `await`.** 예를 들어 `/home`은 자녀 프로필 조회 후 아바타 서명 URL·진행 중인 대화·최근 기록 5건·전체 기록(배지용, 최근 5건과 같은 테이블을 필터만 다르게 또 조회)·형제자매 목록까지 6~7번을 전부 직렬로 기다렸다. 서로 의존하지 않는 조회는 `Promise.all`로 묶고, 최근 5건/전체 기록처럼 같은 테이블·같은 필터의 중복 조회는 하나로 합쳐서 자바스크립트에서 슬라이스하도록 정리함 (`src/app/home/page.tsx`, `src/app/settings/stats/page.tsx`, `src/app/settings/badges/page.tsx`, `src/app/settings/records/page.tsx`). `records/[id]`처럼 다음 조회가 이전 결과값(예: `child_profile_id`)에 의존하는 경우는 원래도 병렬화가 불가능해서 그대로 둠.
+3. **인증 확인이 요청마다 두 번.** `middleware.ts`가 모든 요청에서 `supabase.auth.getUser()`로 세션을 이미 검증/갱신하는데, `src/lib/currentProfile.ts`의 `getCurrentProfile()`이 페이지 렌더 때 또 `getUser()`를 호출해 Supabase Auth 서버에 왕복 하나를 더 만들고 있었다. 미들웨어가 같은 요청 생명주기 안에서 이미 검증을 마쳤으므로, 페이지 쪽은 쿠키의 JWT를 네트워크 없이 로컬에서 읽는 `getSession()`으로 바꿔 왕복 하나를 없앰 — 이 함수가 거의 모든 페이지에서 호출되는 만큼 전역적으로 효과가 있다.
+
+`router.push(...); router.refresh();` 패턴(로그인/PIN/로그아웃 직후 여러 곳에 있음)은 일부러 그대로 뒀다 — 형제자매가 같은 URL(`/home` 등)을 서로 다른 세션으로 방문할 때 Next.js Router Cache가 이전 아이의 캐시된 화면을 보여줄 위험이 있어서 넣어둔 방어 코드로 보이고, 섣불리 지우면 "동생 로그인했는데 형 데이터가 잠깐 보이는" 종류의 버그가 재발할 수 있다. 대신 위 3가지로 그 안에서 일어나는 실제 데이터 조회 자체를 빠르게 만드는 방향으로 접근함.
+
 ## 참고 문서
 
 - [docs/PRD.md](docs/PRD.md) — 전체 PRD (v1.5)

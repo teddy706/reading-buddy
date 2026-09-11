@@ -6,14 +6,21 @@ import type { Profile } from "@/lib/types";
 // 서버 컴포넌트/라우트 핸들러에서 "지금 로그인한 세션이 누구인지"를 한 번에 가져온다.
 // role 분기는 항상 이 함수가 돌려준 profile.role 기준으로 한다 — 부모/자녀 세션은
 // PIN 전환 시 실제로 auth 세션 자체가 바뀌므로(childAuth.ts 참고) auth.uid()로 충분하다.
+//
+// getUser()가 아니라 getSession()을 쓴다: getUser()는 매번 Supabase Auth 서버에
+// 네트워크로 재검증하러 가는데(왕복 지연), middleware.ts가 이 요청이 들어올 때 이미
+// getUser()로 세션을 검증/갱신했으므로(같은 요청 생명주기 안에서 미들웨어가 먼저 실행됨)
+// 여기서 또 검증할 필요가 없다 — getSession()은 쿠키의 JWT를 로컬에서 읽기만 해서
+// 페이지 하나당 왕복 한 번을 없애준다. 이 함수가 페이지 렌더마다(때로는 여러 곳에서)
+// 호출되는 만큼 체감 효과가 크다.
 export async function getCurrentProfile(): Promise<Profile | null> {
   const supabase = createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.user) return null;
 
-  const { data: profile } = await supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle();
+  const { data: profile } = await supabase.from("profiles").select("*").eq("user_id", session.user.id).maybeSingle();
 
   return profile;
 }

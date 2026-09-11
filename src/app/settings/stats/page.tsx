@@ -19,14 +19,17 @@ export default async function StatsPage() {
   const parent = await requireParentProfile();
   const supabase = createClient();
 
-  const { data: children } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("family_id", parent.family_id)
-    .eq("role", "child")
-    .order("created_at", { ascending: true });
-
-  const { data: records } = await supabase.from("reading_records").select("*").eq("family_id", parent.family_id);
+  const [childrenResult, recordsResult] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("*")
+      .eq("family_id", parent.family_id)
+      .eq("role", "child")
+      .order("created_at", { ascending: true }),
+    supabase.from("reading_records").select("*").eq("family_id", parent.family_id),
+  ]);
+  const { data: children } = childrenResult;
+  const { data: records } = recordsResult;
 
   const childProfiles = (children ?? []) as Profile[];
   const readingRecords = (records ?? []) as ReadingRecord[];

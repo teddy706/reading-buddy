@@ -14,40 +14,30 @@ import type { ConversationSession, Profile, ReadingRecord } from "@/lib/types";
 export default async function HomePage() {
   const child = await requireChildProfile();
   const supabase = createClient();
-  const photoUrl = await getAvatarPhotoUrl(supabase, child.avatar_photo_path);
 
-  const { data: inProgress } = await supabase
-    .from("conversation_sessions")
-    .select("*")
-    .eq("child_profile_id", child.id)
-    .eq("status", "in_progress")
-    .order("created_at", { ascending: false });
+  // 서로 의존하지 않는 조회는 병렬로 날린다 — 순서대로 하나씩 기다리면 Supabase 왕복
+  // 지연이 그대로 누적돼 화면 전환이 느려 보인다(사용자 피드백). 최근 5건/전체 기록도
+  // 같은 테이블·같은 필터라 한 번만 조회해서 클라이언트에서 잘라 쓰도록 합쳤다.
+  const [photoUrl, inProgressResult, allRecordsResult, siblingsResult] = await Promise.all([
+    getAvatarPhotoUrl(supabase, child.avatar_photo_path),
+    supabase
+      .from("conversation_sessions")
+      .select("*")
+      .eq("child_profile_id", child.id)
+      .eq("status", "in_progress")
+      .order("created_at", { ascending: false }),
+    supabase.from("reading_records").select("*").eq("child_profile_id", child.id).order("recorded_at", { ascending: false }),
+    // 형제자매 이름/아바타는 profiles RLS가 같은 가족이면 자녀도 조회 가능하게 해준다(프로필
+    // 선택 화면과 동일). 하지만 형제자매의 reading_records 내용은 RLS가 막아두므로("본인 것만"),
+    // "이달의 다독왕" 배지에 필요한 이번 달 권수만 서비스 역할로 별도 집계한다(아래,
+    // getSiblingsThisMonthCounts — 실제 기록 내용은 가져오지 않음).
+    supabase.from("profiles").select("id").eq("family_id", child.family_id).eq("role", "child").neq("id", child.id),
+  ]);
 
-  const { data: records } = await supabase
-    .from("reading_records")
-    .select("*")
-    .eq("child_profile_id", child.id)
-    .order("recorded_at", { ascending: false })
-    .limit(5);
-
-  // 배지 계산에는 최근 5건이 아니라 이 아이의 전체 기록이 필요하다.
-  const { data: myAllRecords } = await supabase.from("reading_records").select("*").eq("child_profile_id", child.id);
-
-  // 형제자매 이름/아바타는 profiles RLS가 같은 가족이면 자녀도 조회 가능하게 해준다(프로필
-  // 선택 화면과 동일). 하지만 형제자매의 reading_records 내용은 RLS가 막아두므로("본인 것만"),
-  // "이달의 다독왕" 배지에 필요한 이번 달 권수만 서비스 역할로 별도 집계한다
-  // (getSiblingsThisMonthCounts — 실제 기록 내용은 가져오지 않음).
-  const { data: siblings } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("family_id", child.family_id)
-    .eq("role", "child")
-    .neq("id", child.id);
-
-  const sessions = (inProgress ?? []) as ConversationSession[];
-  const readingRecords = (records ?? []) as ReadingRecord[];
-  const myRecords = (myAllRecords ?? []) as ReadingRecord[];
-  const siblingProfiles = (siblings ?? []) as Pick<Profile, "id">[];
+  const sessions = (inProgressResult.data ?? []) as ConversationSession[];
+  const myRecords = (allRecordsResult.data ?? []) as ReadingRecord[];
+  const readingRecords = myRecords.slice(0, 5);
+  const siblingProfiles = (siblingsResult.data ?? []) as Pick<Profile, "id">[];
 
   const thisMonthKey = lastNMonths(1)[0].key;
   const siblingsThisMonthCounts = await getSiblingsThisMonthCounts(
