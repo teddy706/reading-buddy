@@ -39,6 +39,7 @@ npm run dev
    - `0004_storage.sql` — 독서노트 사진용 비공개 스토리지 버킷
    - `0005_pin_lockout.sql` — 자녀 PIN 5회 실패 잠금용 컬럼
    - `0006_grants.sql` — anon/authenticated/service_role 테이블 GRANT (위 1번 참고)
+   - `0007_avatar_photo.sql` — 자녀 아바타 사진용 비공개 스토리지 버킷(`avatars`) + `profiles.avatar_photo_path` 컬럼
 4. `CHILD_AUTH_SECRET`, `DOKSEORO_CREDENTIALS_ENCRYPTION_KEY`는 `openssl rand -hex 32`로 생성
 
 ### Azure 셋업
@@ -92,6 +93,7 @@ src/
     readingStats.ts      독서 통계 집계 헬퍼
     badges.ts            배지 카탈로그/판정 로직
     siblingReadingCounts.ts  형제자매 비교용 집계 전용 조회(서비스 역할)
+    avatarPhoto.ts        아바타 사진 경로 규칙 + 서명된 URL 발급
     types.ts             테이블 타입
 supabase/
   migrations/           SQL 마이그레이션 (번호 순서대로 적용)

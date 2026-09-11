@@ -16,6 +16,7 @@ export interface Profile {
   role: ProfileRole;
   name: string;
   avatar: string;
+  avatar_photo_path: string | null;
   pin_hash: string | null;
   pin_fail_count: number;
   pin_locked_until: string | null;

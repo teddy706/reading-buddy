@@ -3,6 +3,7 @@ import { requireParentProfile } from "@/lib/currentProfile";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
 import { lastNMonths, countByMonth } from "@/lib/readingStats";
+import { getAvatarPhotoUrls } from "@/lib/avatarPhoto";
 import type { Profile, ReadingRecord, RecordSourceType, DokseoroStatus } from "@/lib/types";
 
 const SOURCE_LABEL: Record<RecordSourceType, string> = {
@@ -29,6 +30,10 @@ export default async function StatsPage() {
 
   const childProfiles = (children ?? []) as Profile[];
   const readingRecords = (records ?? []) as ReadingRecord[];
+  const photoUrls = await getAvatarPhotoUrls(
+    supabase,
+    childProfiles.map((c) => c.avatar_photo_path)
+  );
 
   const months = lastNMonths(6);
   const currentMonthKey = months[months.length - 1].key;
@@ -65,7 +70,11 @@ export default async function StatsPage() {
             {perChildMonthly.map(({ child, total, thisMonth }) => (
               <div key={child.id} className="card mb-0 text-center">
                 <div className="mb-2 flex items-center justify-center gap-1.5">
-                  <Avatar emoji={child.avatar} size="sm" />
+                  <Avatar
+                    emoji={child.avatar}
+                    photoUrl={child.avatar_photo_path ? (photoUrls.get(child.avatar_photo_path) ?? null) : null}
+                    size="sm"
+                  />
                   <span className="font-bold">{child.name}</span>
                 </div>
                 <p className="text-3xl font-bold text-accent">

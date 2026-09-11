@@ -8,11 +8,13 @@ import { BadgeGrid } from "@/components/BadgeGrid";
 import { computeBadges } from "@/lib/badges";
 import { getSiblingsThisMonthCounts } from "@/lib/siblingReadingCounts";
 import { lastNMonths } from "@/lib/readingStats";
+import { getAvatarPhotoUrl } from "@/lib/avatarPhoto";
 import type { ConversationSession, Profile, ReadingRecord } from "@/lib/types";
 
 export default async function HomePage() {
   const child = await requireChildProfile();
   const supabase = createClient();
+  const photoUrl = await getAvatarPhotoUrl(supabase, child.avatar_photo_path);
 
   const { data: inProgress } = await supabase
     .from("conversation_sessions")
@@ -59,7 +61,7 @@ export default async function HomePage() {
     <div className="app-shell">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Avatar emoji={child.avatar} />
+          <Avatar emoji={child.avatar} photoUrl={photoUrl} />
           <h1 className="text-xl font-bold">{child.name}의 책장</h1>
         </div>
         <LogoutButton label="나가기" />

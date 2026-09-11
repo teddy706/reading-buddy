@@ -5,6 +5,7 @@ import { Avatar } from "@/components/Avatar";
 import { BadgeGrid } from "@/components/BadgeGrid";
 import { computeBadges } from "@/lib/badges";
 import { lastNMonths, countByMonth } from "@/lib/readingStats";
+import { getAvatarPhotoUrls } from "@/lib/avatarPhoto";
 import type { Profile, ReadingRecord } from "@/lib/types";
 
 export default async function BadgesPage() {
@@ -22,6 +23,10 @@ export default async function BadgesPage() {
 
   const childProfiles = (children ?? []) as Profile[];
   const readingRecords = (records ?? []) as ReadingRecord[];
+  const photoUrls = await getAvatarPhotoUrls(
+    supabase,
+    childProfiles.map((c) => c.avatar_photo_path)
+  );
   const thisMonthKey = lastNMonths(1)[0].key;
 
   const recordsByChild = new Map(childProfiles.map((c) => [c.id, readingRecords.filter((r) => r.child_profile_id === c.id)]));
@@ -49,7 +54,11 @@ export default async function BadgesPage() {
           return (
             <div key={child.id} className="card">
               <div className="mb-3 flex items-center gap-2">
-                <Avatar emoji={child.avatar} size="sm" />
+                <Avatar
+                  emoji={child.avatar}
+                  photoUrl={child.avatar_photo_path ? (photoUrls.get(child.avatar_photo_path) ?? null) : null}
+                  size="sm"
+                />
                 <span className="font-bold">{child.name}</span>
                 <span className="text-sm text-soft">· {earnedCount}/{badges.length}개 획득</span>
               </div>

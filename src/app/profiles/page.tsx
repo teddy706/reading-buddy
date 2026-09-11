@@ -3,6 +3,7 @@ import { requireParentProfile } from "@/lib/currentProfile";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
 import { LogoutButton } from "@/components/LogoutButton";
+import { getAvatarPhotoUrls } from "@/lib/avatarPhoto";
 import type { Profile } from "@/lib/types";
 
 export default async function ProfilesPage() {
@@ -17,6 +18,10 @@ export default async function ProfilesPage() {
     .order("created_at", { ascending: true });
 
   const childProfiles = (children ?? []) as Profile[];
+  const photoUrls = await getAvatarPhotoUrls(
+    supabase,
+    childProfiles.map((c) => c.avatar_photo_path)
+  );
 
   return (
     <div className="app-shell">
@@ -26,7 +31,11 @@ export default async function ProfilesPage() {
       <div className="mb-4 grid grid-cols-2 gap-3">
         {childProfiles.map((child) => (
           <Link key={child.id} href={`/profiles/${child.id}/pin`} className="profile-card">
-            <Avatar emoji={child.avatar} size="lg" />
+            <Avatar
+              emoji={child.avatar}
+              photoUrl={child.avatar_photo_path ? (photoUrls.get(child.avatar_photo_path) ?? null) : null}
+              size="lg"
+            />
             <span className="font-bold">{child.name}</span>
           </Link>
         ))}

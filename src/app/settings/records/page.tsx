@@ -3,6 +3,7 @@ import { requireParentProfile } from "@/lib/currentProfile";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
 import { RecordCard } from "@/components/RecordCard";
+import { getAvatarPhotoUrls } from "@/lib/avatarPhoto";
 import type { Profile, ReadingRecord } from "@/lib/types";
 
 export default async function ParentRecordsPage() {
@@ -24,6 +25,10 @@ export default async function ParentRecordsPage() {
 
   const childProfiles = (children ?? []) as Profile[];
   const readingRecords = (records ?? []) as ReadingRecord[];
+  const photoUrls = await getAvatarPhotoUrls(
+    supabase,
+    childProfiles.map((c) => c.avatar_photo_path)
+  );
 
   return (
     <div className="app-shell">
@@ -38,7 +43,11 @@ export default async function ParentRecordsPage() {
         return (
           <div key={child.id} className="mb-5">
             <div className="mb-2 flex items-center gap-2">
-              <Avatar emoji={child.avatar} size="sm" />
+              <Avatar
+                emoji={child.avatar}
+                photoUrl={child.avatar_photo_path ? (photoUrls.get(child.avatar_photo_path) ?? null) : null}
+                size="sm"
+              />
               <span className="font-bold">{child.name}</span>
               <span className="text-sm text-soft">· {childRecords.length}권</span>
             </div>

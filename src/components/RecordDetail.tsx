@@ -19,11 +19,13 @@ export function RecordDetail({
   record,
   childName,
   childAvatar,
+  childAvatarPhotoUrl,
   backHref,
 }: {
   record: ReadingRecord;
   childName: string | null;
   childAvatar: string | null;
+  childAvatarPhotoUrl?: string | null;
   backHref: string;
 }) {
   const router = useRouter();
@@ -97,7 +99,7 @@ export function RecordDetail({
     <div className="app-shell">
       {childName && (
         <div className="mb-4 flex items-center gap-2">
-          {childAvatar && <Avatar emoji={childAvatar} size="sm" />}
+          {childAvatar && <Avatar emoji={childAvatar} photoUrl={childAvatarPhotoUrl} size="sm" />}
           <span className="text-sm font-semibold text-soft">{childName}의 기록</span>
         </div>
       )}
