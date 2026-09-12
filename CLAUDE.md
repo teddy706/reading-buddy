@@ -137,5 +137,8 @@ PRD 4.2 "MVP 이후 로드맵" 후보 중 사용자가 명시적으로 아래 4�
 
 ## 참고 문서
 
-- [docs/PRD.md](docs/PRD.md) — 전체 PRD (v1.5)
+- [docs/PRD.md](docs/PRD.md) — 전체 PRD (v1.6)
+- [docs/BRIEF.md](docs/BRIEF.md) — 프로젝트 브리프(5분 요약)
+- [docs/STORIES.md](docs/STORIES.md) — 기능 단위 사용자 스토리(전부 구현 완료 상태)
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — 실제 구현 기준 기술 아키텍처(PRD 6장의 계획과 다른 부분 포함)
 - `twin_choice/CLAUDE.md` — 자매 앱의 인증/RLS 패턴 원본 (같은 머신의 형제 저장소)
