@@ -10,7 +10,7 @@
 - **백엔드/API**: Next.js API 라우트(`src/app/api/**`) 하나로 통일 — 별도 Supabase Edge Functions/Azure Functions는 쓰지 않음
 - **DB/인증/스토리지**: Supabase (Postgres, Auth, Storage) — 무료 티어
 - **AI**: Azure OpenAI(단계별 질문 코칭 + 감상문 3단 구성 생성), Azure AI Speech(STT), Azure AI Document Intelligence(OCR, 독서노트/표지 인식)
-- **도서 정보**: 카카오 도서 검색 API (알라딘 Open API로 대체/병행 가능, 현재 미연동)
+- **도서 정보**: 카카오 + 네이버 도서 검색 API를 동시에 조회해서 합침(그림책/동화책이 한쪽에만 있는 경우가 많아서 병행) — 네이버 키가 없으면 카카오만으로 계속 동작(선택적 기능). 검색 결과가 0건이면 AI로 오타를 한 번 교정해 재검색한다(`src/lib/bookSearch.ts`)
 - **'독서로' 연동**: 수동 등록 가이드(복사·바로가기·완료 표시) — 이용약관상 자동화 허용 여부 미확인이라 완전 자동화(크롤링)는 만들지 않음
 - **배포**: Vercel (아래 "배포" 섹션 참고)
 
@@ -71,6 +71,18 @@ Phase 항목의 CLAUDE.md 기록 참고). `server-only`로 막힌 모듈을 테�
 3. **Azure AI Document Intelligence**: 검색이 안 되면 `https://portal.azure.com/#create/Microsoft.CognitiveServicesFormRecognizer` 직접 접속
 
 각 리소스의 "키 및 엔드포인트"에서 값을 `.env.local`에 복사.
+
+### 도서 검색 API 셋업
+
+카카오는 필수, 네이버는 선택(없어도 카카오만으로 계속 동작하지만, 그림책/동화책은 한쪽에만 있는 경우가 많아 둘 다 등록하는 걸 권장):
+
+1. **카카오**: [Kakao Developers](https://developers.kakao.com) 로그인 → 앱 생성 → "앱 키"의 REST API 키를 `KAKAO_REST_API_KEY`에 복사
+2. **네이버**(선택): [Naver Developers](https://developers.naver.com/apps/#/register) 로그인 → "Application 등록"
+   - 애플리케이션 이름 아무거나 입력(예: "리딩버디")
+   - "사용 API"에서 **검색** 선택
+   - "비로그인 오픈 API 서비스 환경"에서 **WEB 설정** 추가 필수 — 서비스 URL에 배포 주소(`https://reading-buddy-ten.vercel.app`)와 로컬 개발용(`http://localhost:3000`)을 둘 다 등록해두면 편하다
+   - 등록 완료 후 발급되는 Client ID/Client Secret을 각각 `NAVER_CLIENT_ID`/`NAVER_CLIENT_SECRET`에 복사
+   - Vercel에 배포 중이라면 Vercel 프로젝트의 Environment Variables에도 같은 값을 추가해야 프로덕션에 반영됨
 
 ### 배포 (Vercel)
 

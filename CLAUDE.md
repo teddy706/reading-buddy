@@ -111,6 +111,15 @@ PRD 4.2 "MVP 이후 로드맵" 후보 중 사용자가 명시적으로 아래 4�
 3. **AI 질문 패턴을 부모가 수정 가능하게**: 매번 같은 질문 패턴이 지루할 수 있다는 피드백. 전체 시스템 프롬프트 자유 입력이나 프리셋 선택 대신, **단계별 지침 문구만 수정**하는 방식을 사용자가 직접 선택함(AI가 이상하게 동작할 위험이 적고 구현 범위가 명확). `families.custom_stage_instructions`(jsonb, `0009_custom_stage_instructions.sql`)에 `{"1": "...", "2": "...", "3": "..."}` 형태로 저장하고, 없으면 `src/lib/readingSession.ts`의 `DEFAULT_STAGE_INSTRUCTIONS`로 폴백(`resolveStageInstruction`). 부모 전용 `/settings/coach` 화면에서 단계별 지침을 수정/저장/기본값 되돌리기 할 수 있고, `/api/family/coach-settings`(PATCH, admin 클라이언트)가 저장을 처리한다. `next-question` 라우트가 세션 조회와 병렬로 이 값을 가져와 `generateNextQuestion`에 전달한다. `families` 테이블은 원래 select 정책만 있고 쓰기는 서버(service role)에서만 하므로 새 RLS 정책은 필요 없었다. **`0009_custom_stage_instructions.sql`을 실제 Supabase 프로젝트에 적용 완료** — `/settings/coach` 기능이 실제 DB에서도 동작한다.
 4. **'독서로' 등록 완료 표시는 부모만**: `RecordDetail`의 "✅ '독서로'에 등록했어요" / "등록 취소로 되돌리기" 토글을 지금까지는 자녀도 누를 수 있었다(실제 '독서로' 사이트 로그인·등록은 부모가 하는 일인데 상태 표시는 누구나 바꿀 수 있었던 불일치). `canManageDokseoro` prop으로 화면에서 부모가 아니면 버튼 대신 안내 문구만 보이게 했고, `/api/reading-records/[id]` PATCH도 `dokseoroStatus` 필드가 요청에 있을 때 `profile.role !== 'parent'`면 403을 반환하도록 서버 쪽에도 같은 규칙을 넣었다(RLS는 가족/본인 여부만 가리고 역할별 필드 제한은 못 하므로 라우트가 직접 확인).
 
+## 책 제목 검색: 네이버 병행 + 오타 교정 (2026-09-12)
+
+책 제목 자동완성/표지 인식에서 그림책·동화책이 카카오 도서 검색에 잘 안 걸린다는 피드백. "API를 하나만 써야 하냐"는 질문에 그런 제약은 없어서, 네이버 도서 검색 API를 두 번째 출처로 추가해 병행하기로 함 — 오타 허용 검색은 API 자체엔 없는 기능이라(둘 다 키워드 매칭이라 철자가 틀리면 결과가 안 나옴) AI로 별도 보완.
+
+- `src/lib/naverBook.ts` 추가(`searchNaverBooks`) — 카카오(`kakaoBook.ts`)와 동일한 `BookCandidate` 형태로 반환. `NAVER_CLIENT_ID`/`NAVER_CLIENT_SECRET` 둘 다 없으면 빈 배열만 돌려줘서 선택적 기능으로 동작(카카오만으로도 계속 정상 동작)
+- `src/lib/bookSearch.ts` 신설 — `searchBooksMultiSource()`가 카카오+네이버를 병렬 조회해서 합치고, 제목+저자 기준으로 중복 제거(`dedupeCandidates`, 유닛 테스트 있음). `/api/book-search`(타이핑 자동완성)와 `/api/book-cover-lookup`(표지 인식) 둘 다 기존 `searchBooks`(카카오 단독) 대신 이 함수를 쓰도록 교체
+- `guessCorrectedBookTitle`(`azureOpenAI.ts`, 저지연 모델) 추가 — 카카오+네이버 검색이 0건일 때만 호출해서 오타/띄어쓰기를 교정한 제목을 추측하고 그걸로 한 번 더 검색한다. 검색이 첫 시도에 성공하면 이 AI 호출 자체가 일어나지 않아 평소엔 추가 비용이 없음
+- 네이버 키는 `.env.local.example`/README "도서 검색 API 셋업"에 발급 절차(developers.naver.com, WEB 서비스 URL 등록 필수)를 안내해뒀다 — **사용자가 아직 발급 전이라, 실제 환경에서 네이버 검색이 동작하려면 키를 발급받아 `.env.local`과 Vercel Environment Variables에 등록해야 함**. 안 해도 카카오만으로 기존처럼 동작.
+
 ## 참고 문서
 
 - [docs/PRD.md](docs/PRD.md) — 전체 PRD (v1.5)

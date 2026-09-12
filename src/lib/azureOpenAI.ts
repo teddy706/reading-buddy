@@ -295,3 +295,54 @@ export async function guessCoverTitle(rawText: string): Promise<CoverGuess> {
     return { title: "", author: null };
   }
 }
+
+// 책 제목 자동완성(/api/book-search)이 카카오+네이버 검색에서 0건일 때만 호출하는 폴백이다.
+// 도서 검색 API는 오타 교정 기능이 없어서(키워드 매칭이라 철자가 틀리면 그냥 결과가 안 나옴),
+// 아이가 입력한 텍스트를 보고 "실제로 있을 법한 정확한 제목"을 추측해 그걸로 재검색한다.
+// 검색이 한 번에 성공하는 대부분의 경우엔 이 함수가 아예 호출되지 않아 추가 비용이 없다.
+export async function guessCorrectedBookTitle(typedText: string): Promise<string | null> {
+  if (!typedText.trim()) return null;
+
+  try {
+    const response = await getClient().chat.completions.create({
+      model: process.env.AZURE_OPENAI_QUESTION_DEPLOYMENT!,
+      max_completion_tokens: 100,
+      messages: [
+        {
+          role: "system",
+          content: [
+            "너는 초등학생이 오타나 띄어쓰기 실수를 섞어 입력했을 수 있는 책 제목을 보고, 실제로 존재할 법한 정확한 책 제목을 추측하는 도우미다.",
+            "입력이 이미 정확해 보이면 그대로 돌려줘도 된다.",
+            "확신이 없어도 가장 유력한 후보 하나를 추측해서 돌려준다.",
+            "제목 외의 다른 설명은 절대 덧붙이지 않는다.",
+          ].join("\n"),
+        },
+        { role: "user", content: typedText },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "guess_corrected_title",
+            description: "오타나 띄어쓰기가 섞였을 수 있는 입력에서 실제 책 제목을 추측한다.",
+            parameters: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "추측한 정확한 책 제목" },
+              },
+              required: ["title"],
+            },
+          },
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "guess_corrected_title" } },
+    });
+
+    const toolCall = response.choices[0]?.message?.tool_calls?.[0];
+    if (!toolCall || toolCall.type !== "function") return null;
+    const input = JSON.parse(toolCall.function.arguments) as { title?: string };
+    return input.title?.trim() || null;
+  } catch {
+    return null;
+  }
+}

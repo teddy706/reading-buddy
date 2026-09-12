@@ -3,13 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-
-interface BookCandidate {
-  title: string;
-  author: string | null;
-  thumbnail: string | null;
-  description: string | null;
-}
+import type { BookCandidate } from "@/lib/kakaoBook";
 
 // 타이핑하다 멈추고 이 정도는 지나야 검색하는 디바운스 시간. 너무 짧으면 한 글자마다 검색이
 // 나가고, 초등 3학년이 천천히/서투르게 타이핑할 수 있어서 넉넉하게 잡았다.

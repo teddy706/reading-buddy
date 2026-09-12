@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireChildProfileForApi } from "@/lib/currentProfile";
 import { analyzeImageBytes } from "@/lib/documentIntelligence";
 import { guessCoverTitle } from "@/lib/azureOpenAI";
-import { searchBooks } from "@/lib/kakaoBook";
+import { searchBooksMultiSource } from "@/lib/bookSearch";
 
 // 표지 사진 -> OCR -> AI로 제목 추정 -> 카카오 도서 검색 후보 목록을 한 번에 처리한다.
 // 이 사진은 검색 보조용 일회성 자료라 Storage/DB에 저장하지 않고 요청-응답 안에서만 다룬다.
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const bytes = Buffer.from(await file.arrayBuffer());
     const rawText = await analyzeImageBytes(bytes, file.type);
     const guess = await guessCoverTitle(rawText);
-    const candidates = guess.title ? await searchBooks(guess.title) : [];
+    const candidates = guess.title ? await searchBooksMultiSource(guess.title) : [];
     return NextResponse.json({ candidates });
   } catch {
     return NextResponse.json({ candidates: [] });
