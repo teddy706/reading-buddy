@@ -20,11 +20,16 @@ export function ChatSession({ session }: { session: ConversationSession }) {
   // 질문 생성이 어떤 정보를 참고했는지(또는 못 찾아서 제목만으로 질문 중인지) 아이에게 보여준다.
   const [bookContext, setBookContext] = useState<string | null | undefined>(undefined);
   const [showBookContext, setShowBookContext] = useState(false);
+  // 서버(next-question 라우트)가 계산해 돌려주는 "계획된 질문" 기준 진행률 — 답이 너무 짧아
+  // 팔로업 질문이 끼어드는 동안은 늘지 않고 그대로 유지된다.
+  const [progress, setProgress] = useState({ current: 0, total: TOTAL_QUESTIONS });
   const pcmRecorderRef = useRef<PcmRecorder | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const answeredCount = messages.filter((m) => m.role === "child").length;
+  const latestMessage = messages[messages.length - 1];
+  const latestIsFollowUp = latestMessage?.role === "assistant" && latestMessage.isFollowUp === true;
 
   useEffect(() => {
     if (messages.length === 0) void askNext();
@@ -52,6 +57,7 @@ export function ChatSession({ session }: { session: ConversationSession }) {
         return;
       }
       setBookContext(data.bookContext ?? null);
+      if (data.progress) setProgress(data.progress);
     } catch (err) {
       setError(err instanceof Error ? err.message : "문제가 생겼어요.");
     } finally {
@@ -124,8 +130,9 @@ export function ChatSession({ session }: { session: ConversationSession }) {
         <div className="min-w-0">
           <h1 className="truncate text-lg font-bold">{session.book_title}</h1>
           <p className="text-xs text-soft">
-            {STAGE_LABELS[stageForQuestionIndex(Math.min(answeredCount, TOTAL_QUESTIONS - 1))]} ·{" "}
-            {Math.min(answeredCount, TOTAL_QUESTIONS)}/{TOTAL_QUESTIONS} 질문
+            {STAGE_LABELS[stageForQuestionIndex(Math.min(progress.current, TOTAL_QUESTIONS - 1))]} ·{" "}
+            {progress.current}/{progress.total} 질문
+            {latestIsFollowUp && " · 조금 더 자세히 들려줄래?"}
           </p>
         </div>
         <div className="flex shrink-0 gap-1.5">

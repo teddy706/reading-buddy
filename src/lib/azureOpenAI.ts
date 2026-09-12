@@ -43,8 +43,12 @@ export async function generateNextQuestion(params: {
   // resolveStageInstruction이 기본 지침(DEFAULT_STAGE_INSTRUCTIONS)으로 폴백한다 — 매번 같은
   // 질문 패턴이 지루하지 않도록 부모가 가족 단위로 바꿀 수 있게 한 설정(families.custom_stage_instructions).
   customStageInstructions?: Partial<StageInstructions> | null;
+  // true면 직전 아이 답변이 너무 짧아서(readingSession.ts의 isAnswerTooShort) 다음 단계로
+  // 넘어가지 않고 같은 주제를 한 번 더 캐묻는 "팔로업" 질문을 만든다(2026-09-12 사용자 피드백:
+  // "AI 개입이 더 적극적이면 좋겠다"). next-question 라우트가 단계당 최대 1회로 제한한다.
+  isFollowUp?: boolean;
 }): Promise<string> {
-  const { bookTitle, bookAuthor, bookContext, history, questionIndex, stage, customStageInstructions } = params;
+  const { bookTitle, bookAuthor, bookContext, history, questionIndex, stage, customStageInstructions, isFollowUp } = params;
 
   try {
     const response = await getClient().chat.completions.create({
@@ -69,9 +73,15 @@ export async function generateNextQuestion(params: {
                 ]
               : ["이 책의 줄거리 정보를 찾지 못했다. 책 제목만으로 자연스럽게 질문해라."]),
             resolveStageInstruction(stage, customStageInstructions),
-            questionIndex > 0
-              ? "아이의 직전 답변에 짧게(한 문장) 공감하거나 칭찬한 뒤, 이어서 위 단계에 맞는 질문을 하나만 던져라. 단답형 퀴즈처럼 묻지 말고, 아이가 자기 생각을 편하게 말할 수 있게 묻는다."
-              : "첫 질문이니 바로 위 단계에 맞는 질문 하나로 시작한다.",
+            ...(isFollowUp
+              ? [
+                  "아이의 방금 답이 너무 짧거나 '몰라'처럼 성의 없었다. 혼내거나 다그치는 느낌 없이, 편안하고 다정한 말투로 같은 주제를 조금 더 구체적으로 들려달라고 다시 물어라. 새로운 질문으로 넘어가지 말고 같은 사건/장면에 머물러라. 예: '괜찮아, 천천히 생각해봐. ~할 때 어떤 기분이었어?' 처럼 구체적으로 답하기 쉬운 형태로 다시 물어본다.",
+                ]
+              : [
+                  questionIndex > 0
+                    ? "아이의 직전 답변에 짧게(한 문장) 공감하거나 칭찬한 뒤, 이어서 위 단계에 맞는 질문을 하나만 던져라. 단답형 퀴즈처럼 묻지 말고, 아이가 자기 생각을 편하게 말할 수 있게 묻는다."
+                    : "첫 질문이니 바로 위 단계에 맞는 질문 하나로 시작한다.",
+                ]),
             "질문은 짧고 쉬운 말투(반말, 친구처럼)로 쓴다. 이모지는 쓰지 않는다.",
           ]
             .filter(Boolean)

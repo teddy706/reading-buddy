@@ -53,6 +53,12 @@ export interface ConversationMessage {
   // 2:역할 바꾸기, 3:현실 적용)에서 이 질문이 어느 단계인지. 감상문 조립 시 어떤 답변이
   // 어느 단락(처음/가운데/끝)에 들어가야 하는지 판별하는 데 쓴다.
   stage?: ReadingCoachStage;
+  // assistant(질문) 메시지에만 붙는다. true면 직전 아이 답변이 너무 짧아서(readingSession.ts의
+  // isAnswerTooShort) 같은 단계에 머물며 다시 캐물은 "팔로업" 질문 — 정규 4단계 진행에
+  // 포함되지 않는다(진행 표시/완료 판정은 next-question 라우트가 isFollowUp이 아닌 질문만
+  // 센다). 단계당 최대 1회만 허용해 대화가 끝없이 늘어지지 않게 한다(2026-09-12 사용자 피드백:
+  // "AI 개입이 더 적극적이면 좋겠다" — 답변이 부실한데 감상문만 잘 나오는 간극을 줄이기 위함).
+  isFollowUp?: boolean;
 }
 
 export interface ConversationSession {

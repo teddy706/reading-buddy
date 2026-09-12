@@ -18,6 +18,22 @@ export function stageForQuestionIndex(questionIndex: number): ReadingCoachStage 
   return STAGE_PLAN[questionIndex] ?? 3;
 }
 
+// 답변이 부실해도(예: "몰라") AI가 그냥 다음 단계로 넘어가서 아이 답변은 부실한데 AI가
+// 다듬은 감상문만 잘 나오는 간극이 생겼다(2026-09-12 사용자 피드백: "AI 개입이 더 적극적
+// 이면 좋겠다"). next-question 라우트가 이 판정으로 팔로업 질문 여부를 정한다 — 별도
+// AI 호출 없이 코드에서 즉시 판정해서 비용이 들지 않는다. 완벽한 판정은 불가능하니(짧지만
+// 충실한 답도 있음) 다소 보수적으로(아주 짧거나 흔한 회피성 답에만) 잡는다.
+const DISMISSIVE_ANSWERS = ["몰라", "몰라요", "모름", "글쎄", "글쎄요", "패스", "그냥", "없어", "없어요", "싫어", "안읽음", "안읽었어"];
+
+export function isAnswerTooShort(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed.length <= 3) return true;
+  return DISMISSIVE_ANSWERS.includes(trimmed);
+}
+
+// 단계당 팔로업은 최대 1회 — 아이 집중력을 고려해 대화가 끝없이 늘어지지 않게 상한을 둔다.
+export const MAX_FOLLOW_UPS_PER_STAGE = 1;
+
 export type StageInstructions = Record<ReadingCoachStage, string>;
 
 // 단계별로 AI가 참고하는 지침 문구의 기본값. azureOpenAI.ts의 generateNextQuestion이 시스템
