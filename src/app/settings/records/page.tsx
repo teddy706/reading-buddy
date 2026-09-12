@@ -6,6 +6,10 @@ import { RecordsBrowser, RECORDS_PAGE_SIZE } from "@/components/RecordsBrowser";
 import { getAvatarPhotoUrls } from "@/lib/avatarPhoto";
 import type { Profile, ReadingRecord } from "@/lib/types";
 
+// /records와 동일한 이유(Next.js 기본 fetch 캐시로 인한 Supabase 응답 재사용 방지) — 캐시 관련
+// 코멘트는 src/app/records/page.tsx 참고.
+export const dynamic = "force-dynamic";
+
 export default async function ParentRecordsPage() {
   const parent = await requireParentProfile();
   const supabase = createClient();

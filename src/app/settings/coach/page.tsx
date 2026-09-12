@@ -4,6 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { CoachSettingsForm } from "@/components/CoachSettingsForm";
 import { DEFAULT_STAGE_INSTRUCTIONS, STAGE_LABELS, type StageInstructions } from "@/lib/readingSession";
 
+// Next.js 기본 fetch 캐시로 인한 Supabase 응답 재사용 방지 — src/app/records/page.tsx 참고.
+export const dynamic = "force-dynamic";
+
 export default async function CoachSettingsPage() {
   const parent = await requireParentProfile();
   const supabase = createClient();

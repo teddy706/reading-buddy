@@ -5,6 +5,9 @@ import { Avatar } from "@/components/Avatar";
 import { PinEntry } from "@/components/PinEntry";
 import { getAvatarPhotoUrl } from "@/lib/avatarPhoto";
 
+// Next.js 기본 fetch 캐시로 인한 Supabase 응답 재사용 방지 — src/app/records/page.tsx 참고.
+export const dynamic = "force-dynamic";
+
 export default async function ProfilePinPage({ params }: { params: { id: string } }) {
   const requester = await requireProfile();
 

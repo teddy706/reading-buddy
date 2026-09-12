@@ -4,6 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { RecordsBrowser, RECORDS_PAGE_SIZE } from "@/components/RecordsBrowser";
 import type { ReadingRecord } from "@/lib/types";
 
+// Next.js가 fetch() 응답을 기본 캐시(force-cache)하는 바람에, 같은 URL로 나가는 Supabase
+// PostgREST 요청이 cookies()로 인한 동적 렌더링과 무관하게 이전 응답을 재사용해 최신
+// 기록이 안 보이는 문제가 있었다 — 이 라우트의 Supabase 조회는 항상 새로 가져오게 강제한다.
+export const dynamic = "force-dynamic";
+
 export default async function RecordsPage() {
   const child = await requireChildProfile();
   const supabase = createClient();
