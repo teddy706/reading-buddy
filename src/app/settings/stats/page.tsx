@@ -73,22 +73,25 @@ export default async function StatsPage() {
         <p className="mb-4 text-center text-sm text-soft">아직 자녀 프로필이 없어요.</p>
       ) : (
         <>
-          <div className="mb-3.5 grid gap-3" style={{ gridTemplateColumns: `repeat(${childProfiles.length}, minmax(0, 1fr))` }}>
+          <div
+            className="mb-3.5 grid gap-3"
+            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))" }}
+          >
             {perChildMonthly.map(({ child, total, thisMonth }) => (
-              <div key={child.id} className="card mb-0 text-center">
-                <div className="mb-2 flex items-center justify-center gap-1.5">
+              <div key={child.id} className="card mb-0 p-3 text-center">
+                <div className="mb-2 flex flex-col items-center gap-1">
                   <Avatar
                     emoji={child.avatar}
                     photoUrl={child.avatar_photo_path ? (photoUrls.get(child.avatar_photo_path) ?? null) : null}
                     size="sm"
                   />
-                  <span className="font-bold">{child.name}</span>
+                  <span className="whitespace-nowrap text-sm font-bold">{child.name}</span>
                 </div>
                 <p className="text-3xl font-bold text-accent">
                   {total}
                   <span className="text-base font-normal text-soft">권</span>
                 </p>
-                <p className="text-xs text-soft">이번 달 {thisMonth}권</p>
+                <p className="whitespace-nowrap text-xs text-soft">이번 달 {thisMonth}권</p>
               </div>
             ))}
           </div>
@@ -116,9 +119,9 @@ export default async function StatsPage() {
                 </div>
               ))}
             </div>
-            <div className="mt-4 flex justify-center gap-4">
+            <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1.5">
               {perChildMonthly.map(({ child }, i) => (
-                <span key={child.id} className="flex items-center gap-1.5 text-xs text-soft">
+                <span key={child.id} className="flex items-center gap-1.5 whitespace-nowrap text-xs text-soft">
                   <span className={`inline-block h-2.5 w-2.5 rounded-full ${CHILD_DOT_COLOR[i % CHILD_DOT_COLOR.length]}`} />
                   {child.name}
                 </span>
