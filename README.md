@@ -33,7 +33,7 @@ npm run test:watch   # watch 모드
 질문 폴백, 배지 계산, 통계 집계, 도서 검색 결과 중복 제거, 기록 검색어 이스케이프 등)만
 유닛 테스트(`src/lib/*.test.ts`, `src/components/*.test.ts`)로 다루고, Next.js 서버 컴포넌트/
 API 라우트/RLS 같은 통합 동작은 지금까지처럼 실제 브라우저로 수동 검증한다(각 Phase 항목의
-CLAUDE.md 기록 참고). 현재 8개 파일 50개 테스트. `server-only`로 막힌 모듈을 테스트에서
+CLAUDE.md 기록 참고). 현재 9개 파일 54개 테스트. `server-only`로 막힌 모듈을 테스트에서
 import할 수 있도록 `vitest.config.mts`가 그 패키지를 빈 모듈(`test/stubs/server-only.ts`)로
 치환해둔다.
 

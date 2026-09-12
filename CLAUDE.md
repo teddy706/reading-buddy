@@ -100,7 +100,7 @@ PRD 4.2 "MVP 이후 로드맵" 후보 중 사용자가 명시적으로 아래 4�
 
 지금까지 전부 실제 브라우저 수동 검증으로만 확인해왔고 자동 테스트가 하나도 없었다 — 코드 리뷰에서 지적된 항목. Next.js 서버 컴포넌트/API 라우트/RLS 같은 통합 동작까지 자동화하려면 Supabase/Azure를 모킹하는 큰 작업이 필요해서 범위 밖으로 남겨두고, **외부 의존성이 전혀 없는 순수 함수부터** Vitest로 유닛 테스트를 추가했다: `src/lib/readingSession.ts`(단계별 질문 매핑/폴백), `src/lib/badges.ts`(배지 계산, 형제자매 비교 경계값 포함), `src/lib/readingStats.ts`(월별 집계), `src/lib/childAuth.ts`(PIN 검증/잠금 판정, PIN→비밀번호 파생의 결정론성, bcrypt 해시). 최초 도입 시 총 31개 테스트, `npm run test`로 실행(README "테스트" 절 참고).
 
-> **업데이트(2026-09-12, 이후 기능 추가마다 계속 보강)**: 도서 검색 다중 소스화(`bookSearch.ts`의 `dedupeCandidates`, `libraryBook.ts`의 저자 필드 정리), AI 질문 코치 프리셋(`coachPresets.ts`), 기록 검색의 ilike 패턴 이스케이프(`RecordsBrowser.tsx`의 `toIlikePattern`) 테스트가 추가되며 총 8개 파일 50개 테스트로 늘어났다. 새 순수 로직을 추가할 때는 계속 테스트를 같이 추가할 것.
+> **업데이트(2026-09-12, 이후 기능 추가마다 계속 보강)**: 도서 검색 다중 소스화(`bookSearch.ts`의 `dedupeCandidates`, `libraryBook.ts`의 저자 필드 정리), AI 질문 코치 프리셋(`coachPresets.ts`), 기록 검색의 ilike 패턴 이스케이프(`RecordsBrowser.tsx`의 `toIlikePattern`), 코치 설정 화면의 프리셋 일치 판정(`CoachSettingsForm.tsx`의 `matchingPresetId`) 테스트가 추가되며 총 9개 파일 54개 테스트로 늘어났다. 새 순수 로직을 추가할 때는 계속 테스트를 같이 추가할 것.
 
 - `server-only`로 막힌 모듈(`childAuth.ts` 등)을 일반 Node 런타임(vitest)에서 그냥 import하면 그 패키지 자체가 무조건 예외를 던진다(react-server 조건이 있을 때만 빈 모듈로 치환되는 구조라, Next.js 빌드 밖에서는 항상 실제 `index.js`가 로드됨) — `vitest.config.mts`에서 `server-only`를 `test/stubs/server-only.ts`(빈 모듈)로 alias해서 우회함
 - vitest 최신 메이저(5.x)는 peer로 `@types/node@^22`/`vite@^6~8`을 요구해 이 프로젝트의 `@types/node@^20`과 충돌 — 굳이 그 버전을 맞추려고 프로젝트 전체의 `@types/node`를 올리는 대신, vite를 직접 의존성으로 갖고 있고 peer 요구가 느슨한 `vitest@^2.1.9`로 설치함
@@ -236,6 +236,16 @@ PRD 4.2 "MVP 이후 로드맵" 후보 중 사용자가 명시적으로 아래 4�
 - `layout.tsx`: Geist 로딩 코드를 제거하고 `pretendard` 하나로 교체, `body`에 `pretendard.variable`만 적용.
 - `globals.css`: `body`의 `font-family`를 `var(--font-pretendard)`를 최우선으로 하고 기존 시스템 폰트 스택은 폴백으로 남김(폰트 로드가 늦을 때 대비).
 - 이제 진짜로 안 쓰는 `src/app/fonts/GeistVF.woff`/`GeistMonoVF.woff`는 삭제.
+
+## AI 질문 스타일(/settings/coach) 다듬기 (2026-09-12)
+
+사용자 요청 "AI 질문 스타일에 대해 세심하게 다듬어보자". 코드를 다시 훑어보고 부모가 실제로 이 화면을 쓸 때 겪을 만한 구멍 세 가지를 찾아 고쳤다 — 새 질문을 만들기보다 기존 기능의 완성도를 높이는 데 집중함.
+
+1. **지침 문구를 써놓고도 결과를 확인할 방법이 없었다.** 부모는 자녀 프로필로 전환하지 않는 한 실제 대화 화면을 볼 수 없어서, `/settings/coach`에서 문구를 고쳐도 "이게 실제로 어떤 질문이 되어 나올지" 알 도리가 없었다. 단계별 텍스트 영역 아래에 **"🔍 이 지침으로 예시 질문 미리보기"** 버튼을 추가 — 저장 없이 지금 입력창 내용을 그대로 `generateNextQuestion`(실제 대화에서 쓰는 바로 그 함수)에 1회성으로 넘겨서 결과를 보여준다. 고정 예시 책("무지개 물고기", 저작권 있는 원문이 아니라 사실 관계만 담은 한두 문장 줄거리)과 미리 짜둔 가상 문답을 앞선 단계 맥락으로 깔아둬서, 2·3단계 미리보기도 자연스럽게 이어지도록 했다(`src/app/api/family/coach-settings/preview/route.ts` 신규, 부모 전용).
+2. **글자 수 제한(서버에서 이미 500자로 막고 있었음)이 화면에는 전혀 안 보였다.** 저장을 눌러야만 "너무 길어요" 에러를 만날 수 있었던 것 — 텍스트 영역에 `maxLength={500}`과 실시간 글자 수 카운터를 추가해 애초에 넘길 수 없게 함.
+3. **변경사항을 저장 안 하고 화면을 나가도 아무 경고가 없었다.** "저장하지 않은 변경사항이 있어요" 안내 문구를 추가하고, 변경사항이 없으면(`isDirty`가 false) "저장" 버튼 자체를 비활성화해 불필요한 재저장 클릭도 막음.
+
+부수적으로, 프리셋과 저장된 지침이 정확히 일치하면(공백 트리밍 기준) 화면을 새로 열었을 때도 그 프리셋 카드가 "적용됨"으로 표시되도록 했다(`matchingPresetId`, `src/components/CoachSettingsForm.tsx`에서 export하고 유닛 테스트 4개 추가 — `toIlikePattern`처럼 "use client" 컴포넌트 파일에서 순수 함수만 export해 테스트하는 기존 패턴을 그대로 따름) — 예전엔 페이지를 새로 열 때마다 `loadedPreset`이 항상 `null`로 리셋돼서, 방금까지 프리셋을 쓰고 있었어도 그 사실을 알 수 없었다.
 
 ## 참고 문서
 

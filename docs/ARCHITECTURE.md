@@ -69,7 +69,7 @@ flowchart LR
 | DB/Auth/Storage | Supabase (`@supabase/supabase-js`, `@supabase/ssr`) | Postgres 15, RLS 활성화 |
 | AI SDK | `openai` npm 패키지 | Azure OpenAI를 OpenAI 호환 엔드포인트로 호출(baseURL을 Azure로 지정) |
 | 비밀번호 해시 | `bcryptjs` | 자녀 synthetic 계정 비밀번호, PIN 해시 |
-| 테스트 | Vitest 2.1.9 | 순수 함수 단위 테스트 50개 (`npm run test`, §9 참고) |
+| 테스트 | Vitest 2.1.9 | 순수 함수 단위 테스트 54개 (`npm run test`, §9 참고) |
 | 배포 | Vercel (Hobby) | `vercel.json`에 `regions: ["icn1"]` 고정 |
 | 코드 품질 | ESLint(`eslint-config-next`) | |
 
@@ -115,8 +115,8 @@ src/
       reading-records/[id]
       book-search, book-cover-lookup
       speech/transcribe
-      family/coach-settings
-supabase/migrations/0001~0009_*.sql
+      family/coach-settings, family/coach-settings/preview
+supabase/migrations/0001~0010_*.sql
 test/stubs/server-only.ts       # vitest에서 server-only 모듈 우회용 스텁
 ```
 
@@ -346,7 +346,7 @@ Next.js는 `"use client"`가 선언된 모듈을 서버 컴포넌트가 import�
 
 - **범위**: 외부 의존성(Supabase/Azure API 호출) 없이 **입력→출력만 있는 순수 함수**만 Vitest로 단위 테스트한다. 서버 컴포넌트·API 라우트·RLS 같은 통합 동작은 Supabase/Azure를 모킹하는 큰 작업이 필요해 현재 범위 밖.
 - **대상 모듈**: `readingSession.ts`(단계별 질문 매핑/폴백), `badges.ts`(배지 계산, 형제자매 비교 경계값), `readingStats.ts`(월별 집계), `childAuth.ts`(PIN 검증/잠금 판정, PIN→비밀번호 파생의 결정론성, bcrypt 해시), `bookSearch.ts`(중복 제거), `libraryBook.ts`(저자 필드 정리), `coachPresets.ts`.
-- **총 50개 테스트(8개 파일)**, `npm run test` (watch는 `npm run test:watch`) — `coachPresets.ts`(프리셋 뼈대 유지 검증), `bookSearch.ts`(다중 소스 중복 제거), `libraryBook.ts`(저자 필드 정리), `RecordsBrowser.tsx`의 `toIlikePattern`(ilike 검색어 이스케이프)이 최초 31개 이후 추가됨.
+- **총 54개 테스트(9개 파일)**, `npm run test` (watch는 `npm run test:watch`) — `coachPresets.ts`(프리셋 뼈대 유지 검증), `bookSearch.ts`(다중 소스 중복 제거), `libraryBook.ts`(저자 필드 정리), `RecordsBrowser.tsx`의 `toIlikePattern`(ilike 검색어 이스케이프), `CoachSettingsForm.tsx`의 `matchingPresetId`(프리셋 일치 판정)이 최초 31개 이후 추가됨.
 - **알아둘 점**:
   - `server-only`로 막힌 모듈을 일반 Node 런타임(vitest)에서 그대로 import하면 무조건 예외가 난다(react-server 조건이 있을 때만 빈 모듈로 치환되는 구조) — `vitest.config.mts`에서 `server-only`를 `test/stubs/server-only.ts`(빈 모듈)로 alias해서 우회.
   - vitest 5.x는 peer로 `@types/node@^22`를 요구해 프로젝트의 `@types/node@^20`과 충돌 — 프로젝트 전체 업그레이드 대신 `vitest@^2.1.9`로 고정.
