@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,13 +36,15 @@ export default function LoginPage() {
 
   return (
     <div className="app-shell justify-center">
-      {/* 태블릿/PC에서도 로그인 폼은 모바일과 비슷한 폭으로 가운데 고정 — 넓은 화면 전체로
-          입력창이 늘어지면 오히려 보기 불편하다. */}
-        <div className="mb-4 flex flex-col items-center">
-          <img
+      <div className="mx-auto w-full max-w-sm md:max-w-md">
+        <div className="mb-6 flex flex-col items-center">
+          <Image
             src="/icons/icon-192x192.png"
             alt="도란도란 로고"
+            width={64}
+            height={64}
             className="h-16 w-16 rounded-[18px] shadow-sm mb-2"
+            priority
           />
           <h1 className="text-2xl font-bold">도란도란</h1>
           <p className="mt-1 text-center text-sm text-soft">부모 계정으로 로그인해요</p>
