@@ -12,6 +12,10 @@ export function ChatSession({ session }: { session: ConversationSession }) {
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // undefined = 아직 조회 전, null = 카카오에서 이 책 정보를 못 찾음, string = 찾은 줄거리 요약.
+  // 질문 생성이 어떤 정보를 참고했는지(또는 못 찾아서 제목만으로 질문 중인지) 아이에게 보여준다.
+  const [bookContext, setBookContext] = useState<string | null | undefined>(undefined);
+  const [showBookContext, setShowBookContext] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -43,6 +47,7 @@ export function ChatSession({ session }: { session: ConversationSession }) {
         router.push(`/read/${session.id}/review`);
         return;
       }
+      setBookContext(data.bookContext ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "문제가 생겼어요.");
     } finally {
@@ -119,6 +124,25 @@ export function ChatSession({ session }: { session: ConversationSession }) {
           그만할래
         </button>
       </div>
+
+      {bookContext !== undefined && (
+        <div className="mb-3 text-xs text-soft">
+          {bookContext ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowBookContext((v) => !v)}
+                className="font-semibold text-accent underline"
+              >
+                {showBookContext ? "책 정보 접기" : "📖 참고한 책 정보 보기"}
+              </button>
+              {showBookContext && <p className="mt-1 rounded-xl bg-[#f4f0e8] p-2">{bookContext}</p>}
+            </>
+          ) : (
+            <p>ℹ️ 이 책 정보를 찾지 못해서 제목만으로 질문하고 있어요.</p>
+          )}
+        </div>
+      )}
 
       <div className="mb-3 flex flex-1 flex-col gap-2 overflow-y-auto">
         {messages.map((m, i) => (

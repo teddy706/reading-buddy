@@ -67,5 +67,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const { error: updateError } = await supabase.from("conversation_sessions").update({ messages }).eq("id", session.id);
   if (updateError) return NextResponse.json({ error: "저장하지 못했어요." }, { status: 500 });
 
-  return NextResponse.json({ done: false, messages });
+  // bookContext를 화면에도 그대로 돌려준다 — 카카오에서 어떤 정보를 참고했는지(찾았다면 그
+  // 내용을, 못 찾았다면 null을) 아이/부모가 알 수 있게 ChatSession이 보여준다.
+  return NextResponse.json({ done: false, messages, bookContext });
 }
