@@ -1,8 +1,7 @@
 import { requireParentProfile } from "@/lib/currentProfile";
 import { createClient } from "@/lib/supabase/server";
-import { Avatar } from "@/components/Avatar";
 import { BackLink } from "@/components/BackLink";
-import { RecordsBrowser } from "@/components/RecordsBrowser";
+import { ChildRecordsTabs } from "@/components/ChildRecordsTabs";
 import { RECORDS_PAGE_SIZE } from "@/lib/recordsPaging";
 import { getAvatarPhotoUrls } from "@/lib/avatarPhoto";
 import type { Profile, ReadingRecord } from "@/lib/types";
@@ -50,29 +49,23 @@ export default async function ParentRecordsPage() {
     ),
   ]);
 
+  const tabsData = childrenData.map(({ child, initialRecords, totalCount }) => ({
+    child,
+    initialRecords,
+    totalCount,
+    photoUrl: child.avatar_photo_path ? (photoUrls.get(child.avatar_photo_path) ?? null) : null,
+  }));
+
   return (
     <div className="app-shell">
       <BackLink href="/settings" />
       <h1 className="mb-6 text-center text-2xl font-bold">자녀 독서 기록</h1>
 
-      {childProfiles.length === 0 && (
+      {childProfiles.length === 0 ? (
         <p className="mb-4 text-center text-sm text-soft">아직 자녀 프로필이 없어요.</p>
+      ) : (
+        <ChildRecordsTabs childrenData={tabsData} />
       )}
-
-      {childrenData.map(({ child, initialRecords, totalCount }) => (
-        <div key={child.id} className="mb-5">
-          <div className="mb-2 flex items-center gap-2">
-            <Avatar
-              emoji={child.avatar}
-              photoUrl={child.avatar_photo_path ? (photoUrls.get(child.avatar_photo_path) ?? null) : null}
-              size="sm"
-            />
-            <span className="font-bold">{child.name}</span>
-            <span className="text-sm text-soft">· {totalCount}권</span>
-          </div>
-          <RecordsBrowser childId={child.id} initialRecords={initialRecords} />
-        </div>
-      ))}
     </div>
   );
 }
