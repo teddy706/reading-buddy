@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { requireChildProfile } from "@/lib/currentProfile";
 import { createClient } from "@/lib/supabase/server";
-import { RecordsBrowser, RECORDS_PAGE_SIZE } from "@/components/RecordsBrowser";
+import { RecordsBrowser } from "@/components/RecordsBrowser";
+import { RECORDS_PAGE_SIZE } from "@/lib/recordsPaging";
 import type { ReadingRecord } from "@/lib/types";
 
 // Next.js가 fetch() 응답을 기본 캐시(force-cache)하는 바람에, 같은 URL로 나가는 Supabase

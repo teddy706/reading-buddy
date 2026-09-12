@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { RecordCard } from "@/components/RecordCard";
+import { RECORDS_PAGE_SIZE } from "@/lib/recordsPaging";
 import type { ReadingRecord } from "@/lib/types";
 
-export const RECORDS_PAGE_SIZE = 15;
 const SEARCH_DEBOUNCE_MS = 400;
 
 // ilike 패턴의 와일드카드(%, _)를 이스케이프하고, or() 필터 문법에서 값 구분자로 쓰이는

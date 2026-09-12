@@ -2,7 +2,8 @@ import Link from "next/link";
 import { requireParentProfile } from "@/lib/currentProfile";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
-import { RecordsBrowser, RECORDS_PAGE_SIZE } from "@/components/RecordsBrowser";
+import { RecordsBrowser } from "@/components/RecordsBrowser";
+import { RECORDS_PAGE_SIZE } from "@/lib/recordsPaging";
 import { getAvatarPhotoUrls } from "@/lib/avatarPhoto";
 import type { Profile, ReadingRecord } from "@/lib/types";
 
