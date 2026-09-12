@@ -14,9 +14,17 @@ const pretendard = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "리딩버디",
-  description: "아이와의 대화로 독서 기록을 남기는 가족용 PWA",
+  title: "도란도란 - 대화로 남기는 독서 기록",
+  description: "아이와의 대화와 사진으로 남기는 가족용 독서 기록 PWA",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon.ico" },
+    ],
+    apple: "/icons/apple-touch-icon.png",
+  },
 };
 
 export const viewport = {
