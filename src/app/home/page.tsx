@@ -11,6 +11,9 @@ import { lastNMonths } from "@/lib/readingStats";
 import { getAvatarPhotoUrl } from "@/lib/avatarPhoto";
 import type { ConversationSession, Profile, ReadingRecord } from "@/lib/types";
 
+// Next.js 기본 fetch 캐시로 인한 Supabase 응답 재사용 방지 — src/app/records/page.tsx 참고.
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const child = await requireChildProfile();
   const supabase = createClient();

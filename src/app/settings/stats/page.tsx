@@ -15,6 +15,9 @@ const SOURCE_LABEL: Record<RecordSourceType, string> = {
 const CHILD_BAR_COLOR = ["bg-a", "bg-b", "bg-accent"];
 const CHILD_DOT_COLOR = ["bg-a", "bg-b", "bg-accent"];
 
+// Next.js 기본 fetch 캐시로 인한 Supabase 응답 재사용 방지 — src/app/records/page.tsx 참고.
+export const dynamic = "force-dynamic";
+
 export default async function StatsPage() {
   const parent = await requireParentProfile();
   const supabase = createClient();
