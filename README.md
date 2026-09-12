@@ -114,7 +114,8 @@ src/
     records/            자녀 본인 기록 히스토리/상세 (/records, /records/[id])
     settings/           부모 전용 — children/records/stats/badges
     api/                Next.js API 라우트로 통일된 백엔드 (auth, children, reading-sessions,
-                        ocr-uploads, reading-records, book-cover-lookup, speech/transcribe)
+                        ocr-uploads, reading-records, book-search, book-cover-lookup,
+                        speech/transcribe, family/coach-settings(+/preview))
   lib/
     supabase/           client.ts(브라우저) / server.ts(RSC) / admin.ts(service role, RLS 우회)
     childAuth.ts         자녀 PIN → synthetic 계정 비밀번호 파생
@@ -129,6 +130,8 @@ src/
     siblingReadingCounts.ts  형제자매 비교용 집계 전용 조회(서비스 역할)
     avatarPhoto.ts        아바타 사진 경로 규칙 + 서명된 URL 발급
     bookSearch.ts / libraryBook.ts  도서 검색 다중 소스 조회 + 중복 제거
+    externalBookSearch.ts  네이버쇼핑 검색 링크 생성(페이지 수 등 자동 조회 안 되는 정보를
+                           사람이 직접 찾아보게 하는 도우미 — 서버가 대신 긁어오지 않음)
     recordsPaging.ts      기록 목록 페이지 크기(서버/클라이언트 공용 모듈 — "use client" 금지)
     types.ts             테이블 타입
 supabase/
@@ -146,7 +149,7 @@ Phase 1의 5개 항목과 Phase 2(A~D)가 모두 구현·테스트 완료됐다:
 
 **"4. '독서로' 자동 연동"은 수동 등록 가이드로 구현했다.** 부모의 실제 '독서로' 로그인이 에듀넷 자체 계정임은 확인했지만, 이용약관상 자동화(크롤링) 허용 여부가 불명확해 Playwright 기반 완전 자동화 대신 수동 가이드를 채택했다(사용자 선택). `/records/[id]`·`/settings/records`의 기록 상세 화면에서 책 제목/날짜/내용을 한 번에 복사하는 버튼, '독서로' 사이트를 새 탭으로 여는 링크, 등록 완료 여부를 사람이 직접 표시하는 토글(`reading_records.dokseoro_status`, 부모 전용)을 제공한다. 완전 자동화는 이용약관 확인 후 필요하면 재검토한다.
 
-**Phase 1/2 완료 이후로도 사용자 피드백 기반 개선이 계속 이어지고 있다** — 책 제목 자동완성, AI 질문 코치 프리셋(`/settings/coach`), 기록 목록 무한 스크롤/검색, 대화 "그만할래"를 취소/다음에 작성으로 분리, 화면별 UI 다듬기, AI 질문이 책 내용과 무관해지는 문제 수정(그라운딩 강화) 및 성의 없는 답변에 대한 팔로업 질문 등. 상세 이력은 [CLAUDE.md](CLAUDE.md)와 [docs/STORIES.md](docs/STORIES.md)를 참고.
+**Phase 1/2 완료 이후로도 사용자 피드백 기반 개선이 계속 이어지고 있다** — 책 제목 자동완성, AI 질문 코치 프리셋(`/settings/coach`), 기록 목록 무한 스크롤/검색(자녀별 탭 선택 유지 버그 수정 포함), 대화 "그만할래"를 취소/다음에 작성으로 분리, 화면별 UI 다듬기, AI 질문이 책 내용과 무관해지는 문제 수정(그라운딩 강화) 및 성의 없는 답변에 대한 팔로업 질문, 책 페이지 수 필수 입력 + 네이버쇼핑 검색 도우미 링크, 전 화면 태블릿/PC 반응형 레이아웃, 프리텐다드(Pretendard) 폰트 교체, AI 질문 스타일 화면 다듬기(저장 전 미리보기·글자 수 표시·미저장 경고·팔로업 동작 안내) 등. 상세 이력은 [CLAUDE.md](CLAUDE.md)와 [docs/STORIES.md](docs/STORIES.md)를 참고.
 
 **"2. 대화 기반 독서 기록"은 이후 사용자가 설계한 "단계별 독서록 유도 질문 프레임워크"로 고도화했다.** 4개 질문을 1단계 "장면 소환"(줄거리 확인, 2문항) → 2단계 "역할 바꾸기"(공감) → 3단계 "현실 적용"(자기화)으로 고정하고, 감상문은 이 답변들을 처음(줄거리)-가운데(생각)-끝(현실 연결) 3단 구성으로 조립한다. 상세는 [CLAUDE.md](CLAUDE.md)의 2번 항목 참고.
 
