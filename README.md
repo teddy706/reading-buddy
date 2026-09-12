@@ -40,7 +40,8 @@ npm run dev
    - `0005_pin_lockout.sql` — 자녀 PIN 5회 실패 잠금용 컬럼
    - `0006_grants.sql` — anon/authenticated/service_role 테이블 GRANT (위 1번 참고)
    - `0007_avatar_photo.sql` — 자녀 아바타 사진용 비공개 스토리지 버킷(`avatars`) + `profiles.avatar_photo_path` 컬럼
-4. `CHILD_AUTH_SECRET`, `DOKSEORO_CREDENTIALS_ENCRYPTION_KEY`는 `openssl rand -hex 32`로 생성
+   - `0008_drop_dokseoro_credentials.sql` — 쓰이지 않는 `dokseoro_credentials` 테이블 제거('독서로' 연동은 수동 등록 가이드로 확정, 위 "'독서로' 연동" 참고)
+4. `CHILD_AUTH_SECRET`은 `openssl rand -hex 32`로 생성
 
 ### Azure 셋업
 
