@@ -10,7 +10,7 @@
 - **백엔드/API**: Next.js API 라우트(`src/app/api/**`) 하나로 통일 — 별도 Supabase Edge Functions/Azure Functions는 쓰지 않음
 - **DB/인증/스토리지**: Supabase (Postgres, Auth, Storage) — 무료 티어
 - **AI**: Azure OpenAI(단계별 질문 코칭 + 감상문 3단 구성 생성), Azure AI Speech(STT), Azure AI Document Intelligence(OCR, 독서노트/표지 인식)
-- **도서 정보**: 카카오 도서 검색 API (알라딘 Open API로 대체/병행 가능, 현재 미연동)
+- **도서 정보**: 카카오 + 도서관정보나루(국립중앙도서관 공공데이터) 도서 검색을 동시에 조회해서 합침(그림책/동화책이 한쪽에만 있는 경우가 많아서 병행, 네이버는 API 종료로 코드만 유지) — 없는 출처는 그냥 빠지고 나머지만으로 계속 동작(선택적 기능). 검색 결과가 0건이면 AI로 오타를 한 번 교정해 재검색한다(`src/lib/bookSearch.ts`)
 - **'독서로' 연동**: 수동 등록 가이드(복사·바로가기·완료 표시) — 이용약관상 자동화 허용 여부 미확인이라 완전 자동화(크롤링)는 만들지 않음
 - **배포**: Vercel (아래 "배포" 섹션 참고)
 
@@ -71,6 +71,21 @@ Phase 항목의 CLAUDE.md 기록 참고). `server-only`로 막힌 모듈을 테�
 3. **Azure AI Document Intelligence**: 검색이 안 되면 `https://portal.azure.com/#create/Microsoft.CognitiveServicesFormRecognizer` 직접 접속
 
 각 리소스의 "키 및 엔드포인트"에서 값을 `.env.local`에 복사.
+
+### 도서 검색 API 셋업
+
+카카오는 필수, 나머지는 선택(없어도 카카오만으로 계속 동작하지만, 그림책/동화책은 한쪽에만 있는 경우가 많아 등록하는 걸 권장):
+
+1. **카카오**: [Kakao Developers](https://developers.kakao.com) 로그인 → 앱 생성 → "앱 키"의 REST API 키를 `KAKAO_REST_API_KEY`에 복사
+2. **네이버**(선택, 2026-09 기준 신규 발급 불가): 네이버 도서/쇼핑/전문자료 검색 오픈API가 2026-07-31부로 완전 종료돼서, `developers.naver.com` 애플리케이션 등록 화면의 "사용 API" 목록에 "검색" 자체가 더 이상 없다. `src/lib/naverBook.ts`는 예전에 발급받은 키가 있는 경우를 위해 남겨뒀지만, 새로 시도할 필요는 없다.
+3. **도서관정보나루**(선택): 국립중앙도서관이 운영하는 공공 오픈데이터(data4library.kr) — 네이버/알라딘 도서 검색이 둘 다 종료되면서 대신 추가함. 전국 공공/학교 도서관 소장 데이터라 절판/오래된 그림책도 잘 걸리는 편이나, 줄거리 설명은 제공하지 않는다(표지 이미지만).
+   - [data4library.kr](https://www.data4library.kr) 회원가입 → "데이터활용 > 인증키발급"
+   - 사용목적 **"앱 개발(모바일, 솔루션 등)"** 선택
+   - 서버 IP는 하루 500건 넘게 호출하지 않는 한 비워둬도 됨(Vercel 서버리스는 고정 IP가 없어서 어차피 등록할 게 없음)
+   - 사용기관명/사용용도는 자유롭게 입력(예: "개인용" / "초등 자녀용 독서 기록 앱에서 책 제목 검색·자동완성 기능에 사용합니다.")
+   - 발급된 인증키를 `DATA4LIBRARY_AUTH_KEY`에 복사 — 신청 직후 "승인대기중" 상태로 뜰 수 있음(승인 전엔 호출이 안 될 수 있어서, 승인되면 그때 실제 검색이 반영됨)
+
+Vercel에 배포 중이라면 위에서 등록한 키들을 Vercel 프로젝트의 Environment Variables에도 추가해야 프로덕션에 반영된다.
 
 ### 배포 (Vercel)
 
