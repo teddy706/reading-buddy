@@ -12,6 +12,7 @@ export function ChatSession({ session }: { session: ConversationSession }) {
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
   // undefined = 아직 조회 전, null = 카카오에서 이 책 정보를 못 찾음, string = 찾은 줄거리 요약.
   // 질문 생성이 어떤 정보를 참고했는지(또는 못 찾아서 제목만으로 질문 중인지) 아이에게 보여준다.
   const [bookContext, setBookContext] = useState<string | null | undefined>(undefined);
@@ -52,6 +53,16 @@ export function ChatSession({ session }: { session: ConversationSession }) {
       setError(err instanceof Error ? err.message : "문제가 생겼어요.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function cancelSession() {
+    if (answeredCount > 0 && !window.confirm("지금까지 답한 내용이 사라져요. 정말 취소할까요?")) return;
+    setCancelling(true);
+    try {
+      await fetch(`/api/reading-sessions/${session.id}`, { method: "DELETE" });
+    } finally {
+      router.push("/home");
     }
   }
 
@@ -107,22 +118,22 @@ export function ChatSession({ session }: { session: ConversationSession }) {
 
   return (
     <div className="app-shell">
-      <div className="mb-3 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold">{session.book_title}</h1>
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="truncate text-lg font-bold">{session.book_title}</h1>
           <p className="text-xs text-soft">
             {STAGE_LABELS[stageForQuestionIndex(Math.min(answeredCount, TOTAL_QUESTIONS - 1))]} ·{" "}
             {Math.min(answeredCount, TOTAL_QUESTIONS)}/{TOTAL_QUESTIONS} 질문
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => router.push(`/read/${session.id}/review`)}
-          disabled={answeredCount === 0}
-          className="btn btn-ghost mb-0"
-        >
-          그만할래
-        </button>
+        <div className="flex shrink-0 gap-1.5">
+          <button type="button" onClick={cancelSession} disabled={cancelling} className="btn-pill">
+            취소
+          </button>
+          <button type="button" onClick={() => router.push("/home")} disabled={cancelling} className="btn-pill">
+            다음에 작성
+          </button>
+        </div>
       </div>
 
       {bookContext !== undefined && (
