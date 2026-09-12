@@ -1,5 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types";
 
@@ -40,5 +41,16 @@ export async function requireParentProfile(): Promise<Profile> {
 export async function requireChildProfile(): Promise<Profile> {
   const profile = await requireProfile();
   if (profile.role !== "child") redirect("/profiles");
+  return profile;
+}
+
+// requireChildProfile()의 API 라우트 버전. 라우트 핸들러는 redirect() 대신 JSON 에러 응답을
+// 돌려줘야 하므로 별도로 둔다 — 대화/OCR/표지 인식 관련 라우트는 자녀 전용 페이지에서만
+// 호출되지만, 페이지 가드(requireChildProfile)만으로는 API를 직접 호출하는 것까지 막지
+// 못하므로(부모 세션으로 URL을 직접 열지 않고 fetch만 흉내내도 뚫림) API 쪽에도 같은 검사를 둔다.
+export async function requireChildProfileForApi(): Promise<Profile | NextResponse> {
+  const profile = await getCurrentProfile();
+  if (!profile) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
+  if (profile.role !== "child") return NextResponse.json({ error: "자녀만 할 수 있어요." }, { status: 403 });
   return profile;
 }

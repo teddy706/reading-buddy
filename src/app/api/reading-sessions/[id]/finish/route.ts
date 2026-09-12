@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireChildProfileForApi } from "@/lib/currentProfile";
 
 // 감상문 확인/편집 화면에서 "저장"을 누르면 호출된다. reading_records 를 만들고
 // 대화 세션은 completed 로 표시한다. '독서로' 동기화는 아직 구현 전이라 dokseoro_status는
 // 기본값 pending 그대로 둔다(Phase 1 "4. 독서로 자동 연동" 소관).
+// /read/[id]/review 페이지 자체가 자녀 전용(requireChildProfile)이라 이 라우트도 동일하게 막는다.
 export async function POST(request: Request, { params }: { params: { id: string } }) {
+  const profile = await requireChildProfileForApi();
+  if (profile instanceof NextResponse) return profile;
+
   const supabase = createClient();
   const { essay } = await request.json();
 

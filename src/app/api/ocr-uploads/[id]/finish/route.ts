@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireChildProfileForApi } from "@/lib/currentProfile";
 
+// /read/ocr/[id]/review 페이지 자체가 자녀 전용(requireChildProfile)이라 이 라우트도 동일하게
+// 막는다 — 세션/가족 소유권 확인은 기존대로 RLS(ocr_uploads_select, reading_records_insert)가 전담.
 export async function POST(request: Request, { params }: { params: { id: string } }) {
+  const profile = await requireChildProfileForApi();
+  if (profile instanceof NextResponse) return profile;
+
   const supabase = createClient();
   const { bookTitle, content, recordedDate } = await request.json();
 

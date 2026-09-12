@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireChildProfileForApi } from "@/lib/currentProfile";
 import { generateNextQuestion } from "@/lib/azureOpenAI";
 import { fetchBookContext } from "@/lib/kakaoBook";
 import { TOTAL_QUESTIONS, stageForQuestionIndex } from "@/lib/readingSession";
@@ -7,8 +8,13 @@ import type { ConversationMessage } from "@/lib/types";
 
 // 대화 진행 화면이 매 턴 호출한다. answerText가 있으면 먼저 아이 답변을 messages에 추가하고,
 // 그 다음 답변 개수가 TOTAL_QUESTIONS에 도달했는지 확인해서 done 여부와 다음 질문을 함께 돌려준다.
-// 세션 소유권 확인은 RLS(conversation_sessions_select/update)가 전담한다 — anon key로 충분하다.
+// /read/[id]/chat 페이지 자체가 자녀 전용(requireChildProfile)이라 이 라우트도 동일하게 막는다.
+// 세션 소유권 확인은 RLS(conversation_sessions_select/update)가 전담한다 — 역할까지 자녀로
+// 좁혀두면 RLS의 "child_profile_id = my_profile_id()" 조건까지 자연스럽게 강제된다.
 export async function POST(request: Request, { params }: { params: { id: string } }) {
+  const profile = await requireChildProfileForApi();
+  if (profile instanceof NextResponse) return profile;
+
   const supabase = createClient();
   const { answerText } = await request.json().catch(() => ({ answerText: undefined }));
 

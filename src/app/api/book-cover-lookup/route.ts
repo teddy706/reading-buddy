@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentProfile } from "@/lib/currentProfile";
+import { requireChildProfileForApi } from "@/lib/currentProfile";
 import { analyzeImageBytes } from "@/lib/documentIntelligence";
 import { guessCoverTitle } from "@/lib/azureOpenAI";
 import { searchBooks } from "@/lib/kakaoBook";
@@ -8,9 +8,11 @@ import { searchBooks } from "@/lib/kakaoBook";
 // 이 사진은 검색 보조용 일회성 자료라 Storage/DB에 저장하지 않고 요청-응답 안에서만 다룬다.
 // OCR/AI 추정이 실패해도 에러를 던지지 않고 빈 후보 목록을 반환해서, 화면은 항상 "직접 입력"
 // 경로로 자연스럽게 폴백할 수 있게 한다(Phase 1 OCR 기능과 같은 원칙).
+// /read/new/book 페이지 자체가 자녀 전용(requireChildProfile)이라 이 라우트도 동일하게 막는다 —
+// 페이지 가드만으로는 API를 직접 호출하는 것까지 막지 못하기 때문.
 export async function POST(request: Request) {
-  const profile = await getCurrentProfile();
-  if (!profile) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
+  const profile = await requireChildProfileForApi();
+  if (profile instanceof NextResponse) return profile;
 
   const formData = await request.formData();
   const file = formData.get("photo");
