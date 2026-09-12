@@ -20,7 +20,7 @@ export default async function CoachSettingsPage() {
   const custom = (family?.custom_stage_instructions as Partial<StageInstructions> | null) ?? null;
 
   return (
-    <div className="app-shell-wide">
+    <div className="app-shell">
       <BackLink href="/settings" />
       <h1 className="mb-1 text-center text-2xl font-bold">AI 질문 스타일</h1>
       <p className="mb-4 text-center text-sm text-soft">

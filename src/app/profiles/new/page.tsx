@@ -122,66 +122,68 @@ export default function NewProfilePage() {
   if (step === "info") {
     return (
       <div className="app-shell justify-center">
-        <h1 className="mb-6 text-center text-2xl font-bold">프로필 추가</h1>
-        <form className="card" onSubmit={goToPin}>
-          <div className="mb-4 flex items-center gap-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={onPhotoSelected}
-              className="hidden"
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="relative shrink-0"
-              aria-label="아이 사진 올리기"
-            >
-              <Avatar emoji={avatar} photoUrl={photoPreviewUrl} />
-              <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-ink bg-white text-[10px]">
-                📷
-              </span>
-            </button>
-            {photoPreviewUrl ? (
-              <button type="button" onClick={removePhotoSelection} className="text-sm text-soft underline">
-                사진 빼고 이모지 쓰기
-              </button>
-            ) : (
-              <p className="text-sm text-soft">사진을 올리면 이모지 대신 보여요 (선택)</p>
-            )}
-          </div>
-          <input
-            type="text"
-            placeholder="이름"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            className="input"
-          />
-          <p className="mb-2 text-sm font-semibold text-soft">아바타 선택</p>
-          <div className="mb-4 grid grid-cols-4 gap-2">
-            {AVATAR_OPTIONS.map((option) => (
+        <div className="mx-auto w-full max-w-sm md:max-w-md">
+          <h1 className="mb-6 text-center text-2xl font-bold">프로필 추가</h1>
+          <form className="card" onSubmit={goToPin}>
+            <div className="mb-4 flex items-center gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={onPhotoSelected}
+                className="hidden"
+              />
               <button
-                key={option}
                 type="button"
-                onClick={() => {
-                  setAvatar(option);
-                  if (photoPreviewUrl) removePhotoSelection();
-                }}
-                className={`flex items-center justify-center rounded-2xl border-2 p-2 ${
-                  avatar === option && !photoPreviewUrl ? "border-accent bg-accent/10" : "border-[#eee]"
-                }`}
+                onClick={() => fileInputRef.current?.click()}
+                className="relative shrink-0"
+                aria-label="아이 사진 올리기"
               >
-                <Avatar emoji={option} />
+                <Avatar emoji={avatar} photoUrl={photoPreviewUrl} />
+                <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-ink bg-white text-[10px]">
+                  📷
+                </span>
               </button>
-            ))}
-          </div>
-          {error && <p className="mb-2 text-sm font-semibold text-red-500">{error}</p>}
-          <button type="submit" className="btn btn-primary mb-0">
-            다음: PIN 설정
-          </button>
-        </form>
+              {photoPreviewUrl ? (
+                <button type="button" onClick={removePhotoSelection} className="text-sm text-soft underline">
+                  사진 빼고 이모지 쓰기
+                </button>
+              ) : (
+                <p className="text-sm text-soft">사진을 올리면 이모지 대신 보여요 (선택)</p>
+              )}
+            </div>
+            <input
+              type="text"
+              placeholder="이름"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              className="input"
+            />
+            <p className="mb-2 text-sm font-semibold text-soft">아바타 선택</p>
+            <div className="mb-4 grid grid-cols-4 gap-2">
+              {AVATAR_OPTIONS.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => {
+                    setAvatar(option);
+                    if (photoPreviewUrl) removePhotoSelection();
+                  }}
+                  className={`flex items-center justify-center rounded-2xl border-2 p-2 ${
+                    avatar === option && !photoPreviewUrl ? "border-accent bg-accent/10" : "border-[#eee]"
+                  }`}
+                >
+                  <Avatar emoji={option} />
+                </button>
+              ))}
+            </div>
+            {error && <p className="mb-2 text-sm font-semibold text-red-500">{error}</p>}
+            <button type="submit" className="btn btn-primary mb-0">
+              다음: PIN 설정
+            </button>
+          </form>
+        </div>
       </div>
     );
   }
@@ -190,22 +192,24 @@ export default function NewProfilePage() {
   const currentValue = isConfirmStep ? pinConfirm : pin;
   return (
     <div className="app-shell justify-center">
-      <h1 className="mb-2 text-center text-2xl font-bold">
-        {isConfirmStep ? "PIN을 한 번 더" : `${name}의 PIN`}
-      </h1>
-      <p className="mb-6 text-center text-sm text-soft">
-        {isConfirmStep ? "확인을 위해 다시 입력해주세요" : "숫자 4자리를 입력해주세요"}
-      </p>
-      <PinDots length={4} filled={currentValue.length} />
-      {error && <p className="mb-4 text-center text-sm font-semibold text-red-500">{error}</p>}
-      <PinKeypad value={currentValue} onChange={isConfirmStep ? onPinConfirmChange : onPinChange} disabled={loading} />
-      <PinConfirmButton
-        ready={currentValue.length === 4}
-        loading={loading}
-        onClick={isConfirmStep ? submitPin : goToPinConfirm}
-        label={isConfirmStep ? "완료" : "다음"}
-        loadingLabel="만드는 중..."
-      />
+      <div className="mx-auto w-full max-w-sm">
+        <h1 className="mb-2 text-center text-2xl font-bold">
+          {isConfirmStep ? "PIN을 한 번 더" : `${name}의 PIN`}
+        </h1>
+        <p className="mb-6 text-center text-sm text-soft">
+          {isConfirmStep ? "확인을 위해 다시 입력해주세요" : "숫자 4자리를 입력해주세요"}
+        </p>
+        <PinDots length={4} filled={currentValue.length} />
+        {error && <p className="mb-4 text-center text-sm font-semibold text-red-500">{error}</p>}
+        <PinKeypad value={currentValue} onChange={isConfirmStep ? onPinConfirmChange : onPinChange} disabled={loading} />
+        <PinConfirmButton
+          ready={currentValue.length === 4}
+          loading={loading}
+          onClick={isConfirmStep ? submitPin : goToPinConfirm}
+          label={isConfirmStep ? "완료" : "다음"}
+          loadingLabel="만드는 중..."
+        />
+      </div>
     </div>
   );
 }

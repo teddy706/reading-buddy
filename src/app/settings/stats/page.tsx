@@ -65,7 +65,7 @@ export default async function StatsPage() {
   const totalRecords = readingRecords.length;
 
   return (
-    <div className="app-shell-wide">
+    <div className="app-shell">
       <BackLink href="/settings" />
       <h1 className="mb-6 text-center text-2xl font-bold">독서 통계</h1>
 

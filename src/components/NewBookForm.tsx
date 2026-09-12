@@ -159,6 +159,9 @@ export function NewBookForm() {
 
   return (
     <div className="app-shell justify-center">
+      {/* 자동완성 드롭다운이 이 컨테이너 폭 기준으로 펼쳐지므로, 넓은 화면에서도 모바일과
+          비슷한 폭으로 고정해 레이아웃이 흐트러지지 않게 한다. */}
+      <div className="mx-auto w-full max-w-md">
       <h1 className="mb-6 text-center text-2xl font-bold">무슨 책 읽었어?</h1>
 
       <input
@@ -289,6 +292,7 @@ export function NewBookForm() {
           {loading ? "시작하는 중..." : "이야기 시작하기"}
         </button>
       </form>
+      </div>
     </div>
   );
 }

@@ -49,7 +49,7 @@ export default async function BadgesPage() {
   });
 
   return (
-    <div className="app-shell-wide">
+    <div className="app-shell">
       <BackLink href="/settings" />
       <h1 className="mb-6 text-center text-2xl font-bold">배지 비교</h1>
 

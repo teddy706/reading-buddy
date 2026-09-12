@@ -27,7 +27,7 @@ export default async function SettingsChildrenPage() {
   );
 
   return (
-    <div className="app-shell-wide">
+    <div className="app-shell">
       <BackLink href="/settings" />
       <h1 className="mb-6 text-center text-2xl font-bold">자녀 프로필 관리</h1>
 

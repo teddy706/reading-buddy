@@ -81,6 +81,7 @@ export function ReviewSession({ session }: { session: ConversationSession }) {
 
   return (
     <div className="app-shell">
+      <div className="mx-auto flex w-full max-w-xl flex-1 flex-col">
       <h1 className="mb-1 text-center text-xl font-bold">{session.book_title}</h1>
       {session.book_page_count != null && (
         <p className="mb-1 text-center text-xs text-soft">총 {session.book_page_count}쪽</p>
@@ -158,6 +159,7 @@ export function ReviewSession({ session }: { session: ConversationSession }) {
       )}
 
       {error && <p className="mb-2 mt-2 text-sm font-semibold text-red-500">{error}</p>}
+      </div>
     </div>
   );
 }

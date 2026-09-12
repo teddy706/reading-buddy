@@ -58,7 +58,7 @@ export default async function ParentRecordsPage() {
   }));
 
   return (
-    <div className="app-shell-wide">
+    <div className="app-shell">
       <BackLink href="/settings" />
       <h1 className="mb-6 text-center text-2xl font-bold">자녀 독서 기록</h1>
 

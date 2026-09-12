@@ -30,7 +30,7 @@ export default async function RecordsPage() {
       <BackLink href="/home" />
       <h1 className="mb-6 text-center text-2xl font-bold">내가 기록한 책</h1>
 
-      <RecordsBrowser childId={child.id} initialRecords={readingRecords} />
+      <RecordsBrowser childId={child.id} initialRecords={readingRecords} layout="grid" />
     </div>
   );
 }

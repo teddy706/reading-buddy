@@ -126,6 +126,10 @@ export function ChatSession({ session }: { session: ConversationSession }) {
 
   return (
     <div className="app-shell">
+      {/* 채팅 UI는 메시지 폭이 너무 넓어지면 오히려 읽기 불편해서, 넓은 화면에서도 대화창
+          자체는 적당한 폭(모바일보다 조금 더 넓은 정도)으로 가운데 고정한다. flex-1로
+          바깥 shell의 남은 세로 공간을 그대로 이어받아 메시지 영역 스크롤이 정상 동작한다. */}
+      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
       <div className="mb-3 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h1 className="truncate text-lg font-bold">{session.book_title}</h1>
@@ -206,6 +210,7 @@ export function ChatSession({ session }: { session: ConversationSession }) {
         >
           보내기
         </button>
+      </div>
       </div>
     </div>
   );

@@ -139,6 +139,7 @@ export function RecordDetail({
 
   return (
     <div className="app-shell">
+      <div className="mx-auto w-full max-w-xl">
       <BackLink href={backHref} />
 
       {childName && (
@@ -261,6 +262,7 @@ export function RecordDetail({
         ) : (
           <p className="text-xs text-soft">등록 완료 표시는 부모님만 바꿀 수 있어요.</p>
         )}
+      </div>
       </div>
     </div>
   );

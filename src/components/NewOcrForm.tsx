@@ -50,27 +50,29 @@ export function NewOcrForm() {
 
   return (
     <div className="app-shell justify-center">
-      <h1 className="mb-2 text-center text-2xl font-bold">독서노트를 찍어줘</h1>
-      <p className="mb-6 text-center text-sm text-soft">노트를 반듯하게 놓고 찍으면 더 잘 읽혀요</p>
+      <div className="mx-auto w-full max-w-sm">
+        <h1 className="mb-2 text-center text-2xl font-bold">독서노트를 찍어줘</h1>
+        <p className="mb-6 text-center text-sm text-soft">노트를 반듯하게 놓고 찍으면 더 잘 읽혀요</p>
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={onFileSelected}
-        className="hidden"
-      />
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={onFileSelected}
+          className="hidden"
+        />
 
-      {loading ? (
-        <div className="card text-center text-sm text-soft">글자를 읽는 중...</div>
-      ) : (
-        <button type="button" onClick={() => inputRef.current?.click()} className="btn btn-primary">
-          📷 사진 찍기 / 고르기
-        </button>
-      )}
+        {loading ? (
+          <div className="card text-center text-sm text-soft">글자를 읽는 중...</div>
+        ) : (
+          <button type="button" onClick={() => inputRef.current?.click()} className="btn btn-primary">
+            📷 사진 찍기 / 고르기
+          </button>
+        )}
 
-      {error && <p className="mb-2 text-center text-sm font-semibold text-red-500">{error}</p>}
+        {error && <p className="mb-2 text-center text-sm font-semibold text-red-500">{error}</p>}
+      </div>
     </div>
   );
 }

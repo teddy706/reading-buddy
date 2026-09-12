@@ -25,12 +25,14 @@ export default async function ProfilePinPage({ params }: { params: { id: string 
 
   return (
     <div className="app-shell justify-center">
-      <div className="mb-6 flex flex-col items-center gap-3">
-        <Avatar emoji={child.avatar} photoUrl={photoUrl} size="lg" />
-        <h1 className="text-2xl font-bold">{child.name}</h1>
-        <p className="text-sm text-soft">PIN 4자리를 입력해주세요</p>
+      <div className="mx-auto w-full max-w-sm">
+        <div className="mb-6 flex flex-col items-center gap-3">
+          <Avatar emoji={child.avatar} photoUrl={photoUrl} size="lg" />
+          <h1 className="text-2xl font-bold">{child.name}</h1>
+          <p className="text-sm text-soft">PIN 4자리를 입력해주세요</p>
+        </div>
+        <PinEntry profileId={child.id} />
       </div>
-      <PinEntry profileId={child.id} />
     </div>
   );
 }

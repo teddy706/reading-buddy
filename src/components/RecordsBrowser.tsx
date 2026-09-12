@@ -31,9 +31,10 @@ export function RecordsBrowser({
 }: {
   childId: string;
   initialRecords: ReadingRecord[];
-  // "grid"는 부모 대시보드(/settings/records, ChildRecordsTabs)처럼 넓은 화면(태블릿/PC)에서
-  // 여러 열로 보여줄 여유가 있는 곳에서만 켠다 — 자녀 본인 화면(/records)은 항상 좁은 모바일
-  // 폭 하나만 지원하므로 기본값(list)을 그대로 쓴다(2026-09-12, "부모용 화면 위주로 먼저").
+  // "grid"는 태블릿/PC처럼 넓은 화면에서 여러 열로 보여줄 여유가 있는 곳에서 켠다(md 미만
+  // 모바일 폭에서는 "list"와 동일하게 1열로 보임 — 그리드 자체가 md부터 열이 늘어나는
+  // 구조라서). 기본값은 "list"(기존 동작 그대로)이고, 그리드 배치를 실제로 쓰는 화면
+  // (/records, /settings/records)이 명시적으로 "grid"를 넘긴다(2026-09-12).
   layout?: "list" | "grid";
 }) {
   const hasAnyRecordsEver = initialRecords.length > 0;

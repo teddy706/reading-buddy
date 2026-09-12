@@ -52,6 +52,7 @@ export default async function HomePage() {
 
   return (
     <div className="app-shell">
+      <div className="mx-auto w-full max-w-xl">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Avatar emoji={child.avatar} photoUrl={photoUrl} />
@@ -88,6 +89,7 @@ export default async function HomePage() {
       ) : (
         readingRecords.map((r) => <RecordCard key={r.id} record={r} />)
       )}
+      </div>
     </div>
   );
 }

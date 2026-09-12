@@ -57,6 +57,7 @@ export function OcrReview({
 
   return (
     <div className="app-shell">
+      <div className="mx-auto w-full max-w-xl">
       <h1 className="mb-1 text-center text-xl font-bold">내용을 확인해줘</h1>
       <p className="mb-4 text-center text-sm text-soft">글자가 이상하면 고쳐도 돼요</p>
 
@@ -118,6 +119,7 @@ export function OcrReview({
       <button type="button" onClick={onSave} disabled={saving} className="btn btn-primary mt-auto mb-0">
         {saving ? "저장하는 중..." : "저장"}
       </button>
+      </div>
     </div>
   );
 }

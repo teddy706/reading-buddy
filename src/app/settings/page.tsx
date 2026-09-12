@@ -6,7 +6,7 @@ export default async function SettingsPage() {
   await requireParentProfile();
 
   return (
-    <div className="app-shell-wide">
+    <div className="app-shell">
       <h1 className="mb-6 text-center text-2xl font-bold">부모 설정</h1>
 
       {/* 태블릿/PC 폭에서는 2열로 — 화면이 넓어질수록 카드가 세로로만 길게 늘어지지 않게 한다. */}

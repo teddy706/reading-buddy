@@ -28,10 +28,12 @@ export default async function ProfilesPage() {
 
   return (
     <div className="app-shell">
+      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
       <h1 className="mb-1 mt-1 text-center text-2xl font-bold">누가 쓸까요?</h1>
       <p className="mb-6 text-center text-sm text-soft">프로필을 골라주세요</p>
 
-      <div className="mb-4 grid grid-cols-2 gap-3">
+      {/* 자녀가 늘어나도(4명+) 넓은 화면에서는 한 줄에 더 많이 보이게 */}
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
         {childProfiles.map((child) => (
           <Link key={child.id} href={`/profiles/${child.id}/pin`} className="profile-card">
             <Avatar
@@ -54,11 +56,12 @@ export default async function ProfilesPage() {
         <p className="mb-4 text-center text-sm text-soft">아직 자녀 프로필이 없어요. 위에서 추가해주세요.</p>
       )}
 
-      <div className="mt-auto flex flex-col gap-2">
+      <div className="mt-auto flex flex-col gap-2 md:mx-auto md:w-full md:max-w-xs">
         <Link href="/settings" className="btn btn-outline mb-0">
           부모 설정
         </Link>
         <LogoutButton />
+      </div>
       </div>
     </div>
   );
