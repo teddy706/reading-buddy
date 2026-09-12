@@ -1,24 +1,7 @@
 import "server-only";
 import { AzureOpenAI } from "openai/azure";
 import type { ConversationMessage, ReadingCoachStage } from "@/lib/types";
-import { fallbackQuestion, stageForQuestionIndex } from "@/lib/readingSession";
-
-// 단계별 독서록 유도 질문 프레임워크(사용자 설계)의 단계별 지침. generateNextQuestion이
-// questionIndex 대신 이 단계 정보로 시스템 프롬프트를 분기한다.
-const STAGE_INSTRUCTIONS: Record<ReadingCoachStage, string> = {
-  1: [
-    "지금은 1단계 '장면 소환' 단계다 — 아이가 책을 실제로 읽었는지 자연스럽게 확인하면서 줄거리를 이끌어낸다.",
-    "아직 '가장 큰 사건/문제'를 묻지 않았다면 그것부터 묻고, 이미 물어서 답을 들었다면 '주인공이 그 문제를 풀려고 어떤 행동을 했는지' 이어서 묻는다.",
-  ].join("\n"),
-  2: [
-    "지금은 2단계 '역할 바꾸기' 단계다 — 아이가 인물의 마음이나 동기에 공감하고 입체적으로 생각해보게 한다.",
-    "예: 주인공이 그런 결정을 했을 때 마음이 어땠을지, 또는 아이 자신이라면 그 상황에서 어떻게 했을지 묻는다.",
-  ].join("\n"),
-  3: [
-    "지금은 3단계 '현실 적용' 단계이자 마지막 질문이다 — 책의 메시지를 아이의 실제 생활/경험과 연결지어 마무리한다.",
-    "예: 비슷한 경험이 떠오르는지, 가장 인상 깊었던 장면 하나를 고른다면 무엇이고 왜 그런지 묻는다.",
-  ].join("\n"),
-};
+import { fallbackQuestion, resolveStageInstruction, stageForQuestionIndex, type StageInstructions } from "@/lib/readingSession";
 
 // 질문 생성(저지연 경량 모델)과 감상문 생성(상위 품질 모델)은 서로 다른 배포를 쓴다(PRD 6.5).
 // 두 모델 다 max_completion_tokens를 쓴다 — gpt-4o-mini 이후 세대 모델은 max_tokens를 거부한다
@@ -56,8 +39,12 @@ export async function generateNextQuestion(params: {
   history: ConversationMessage[];
   questionIndex: number;
   stage: ReadingCoachStage;
+  // 가족이 /settings/coach에서 직접 수정한 단계별 지침. 없거나 해당 단계 값이 비어있으면
+  // resolveStageInstruction이 기본 지침(DEFAULT_STAGE_INSTRUCTIONS)으로 폴백한다 — 매번 같은
+  // 질문 패턴이 지루하지 않도록 부모가 가족 단위로 바꿀 수 있게 한 설정(families.custom_stage_instructions).
+  customStageInstructions?: Partial<StageInstructions> | null;
 }): Promise<string> {
-  const { bookTitle, bookAuthor, bookContext, history, questionIndex, stage } = params;
+  const { bookTitle, bookAuthor, bookContext, history, questionIndex, stage, customStageInstructions } = params;
 
   try {
     const response = await getClient().chat.completions.create({
@@ -70,7 +57,7 @@ export async function generateNextQuestion(params: {
             "너는 초등학교 3학년 아이와 방금 읽은 책에 대해 짧게 대화하며 독서 기록을 도와주는 1:1 독서 코치다.",
             `아이가 읽은 책: "${bookTitle}"${bookAuthor ? ` (저자: ${bookAuthor})` : ""}`,
             ...(bookContext ? [`책 줄거리 요약(참고용, 아이에게 그대로 알려주지 말 것): ${bookContext}`] : []),
-            STAGE_INSTRUCTIONS[stage],
+            resolveStageInstruction(stage, customStageInstructions),
             questionIndex > 0
               ? "아이의 직전 답변에 짧게(한 문장) 공감하거나 칭찬한 뒤, 이어서 위 단계에 맞는 질문을 하나만 던져라. 단답형 퀴즈처럼 묻지 말고, 아이가 자기 생각을 편하게 말할 수 있게 묻는다."
               : "첫 질문이니 바로 위 단계에 맞는 질문 하나로 시작한다.",

@@ -21,6 +21,7 @@ export function RecordDetail({
   childAvatar,
   childAvatarPhotoUrl,
   conversationMessages,
+  canManageDokseoro,
   backHref,
 }: {
   record: ReadingRecord;
@@ -28,6 +29,9 @@ export function RecordDetail({
   childAvatar: string | null;
   childAvatarPhotoUrl?: string | null;
   conversationMessages?: ConversationMessage[] | null;
+  // '독서로' 실제 등록은 부모가 그 사이트에 로그인해서 하는 일이라, "등록했어요" 상태 전환도
+  // 부모만 할 수 있게 한다 — 서버(reading-records PATCH)도 같은 규칙을 강제한다.
+  canManageDokseoro: boolean;
   backHref: string;
 }) {
   const router = useRouter();
@@ -176,24 +180,28 @@ export function RecordDetail({
           &apos;독서로&apos; 사이트 열기 ↗
         </a>
 
-        {dokseoroStatus === "synced" ? (
-          <button
-            type="button"
-            onClick={() => onMarkDokseoro("pending")}
-            disabled={markingStatus}
-            className="btn btn-ghost mb-0"
-          >
-            등록 취소로 되돌리기
-          </button>
+        {canManageDokseoro ? (
+          dokseoroStatus === "synced" ? (
+            <button
+              type="button"
+              onClick={() => onMarkDokseoro("pending")}
+              disabled={markingStatus}
+              className="btn btn-ghost mb-0"
+            >
+              등록 취소로 되돌리기
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onMarkDokseoro("synced")}
+              disabled={markingStatus}
+              className="btn btn-primary mb-0"
+            >
+              {markingStatus ? "저장하는 중..." : "✅ '독서로'에 등록했어요"}
+            </button>
+          )
         ) : (
-          <button
-            type="button"
-            onClick={() => onMarkDokseoro("synced")}
-            disabled={markingStatus}
-            className="btn btn-primary mb-0"
-          >
-            {markingStatus ? "저장하는 중..." : "✅ '독서로'에 등록했어요"}
-          </button>
+          <p className="text-xs text-soft">등록 완료 표시는 부모님만 바꿀 수 있어요.</p>
         )}
       </div>
 

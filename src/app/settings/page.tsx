@@ -29,6 +29,11 @@ export default async function SettingsPage() {
         <p className="text-sm text-soft">이름, 아바타, PIN 재설정</p>
       </Link>
 
+      <Link href="/settings/coach" className="card block">
+        <p className="font-bold">AI 질문 스타일</p>
+        <p className="text-sm text-soft">대화할 때 AI가 참고하는 단계별 질문 지침을 우리 가족 스타일로 바꿔요</p>
+      </Link>
+
       <div className="mt-auto flex flex-col gap-2">
         <Link href="/profiles" className="btn btn-outline mb-0">
           프로필 선택으로

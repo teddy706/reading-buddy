@@ -33,6 +33,7 @@ export default async function RecordDetailPage({ params }: { params: { id: strin
       childAvatar={showChild ? child?.avatar ?? null : null}
       childAvatarPhotoUrl={childPhotoUrl}
       conversationMessages={(conversation?.messages as ConversationMessage[] | undefined) ?? null}
+      canManageDokseoro={viewer.role === "parent"}
       backHref={showChild ? "/settings/records" : "/records"}
     />
   );

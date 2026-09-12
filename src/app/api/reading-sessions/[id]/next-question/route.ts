@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireChildProfileForApi } from "@/lib/currentProfile";
 import { generateNextQuestion } from "@/lib/azureOpenAI";
 import { fetchBookContext } from "@/lib/kakaoBook";
-import { TOTAL_QUESTIONS, stageForQuestionIndex } from "@/lib/readingSession";
+import { TOTAL_QUESTIONS, stageForQuestionIndex, type StageInstructions } from "@/lib/readingSession";
 import type { ConversationMessage } from "@/lib/types";
 
 // 대화 진행 화면이 매 턴 호출한다. answerText가 있으면 먼저 아이 답변을 messages에 추가하고,
@@ -18,11 +18,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const supabase = createClient();
   const { answerText } = await request.json().catch(() => ({ answerText: undefined }));
 
-  const { data: session, error: fetchError } = await supabase
-    .from("conversation_sessions")
-    .select("*")
-    .eq("id", params.id)
-    .maybeSingle();
+  // 세션과 "부모가 커스텀한 질문 지침(families.custom_stage_instructions)"은 서로 의존하지
+  // 않으니 병렬로 가져온다 — family_id는 이미 profile에 있어서 세션 조회를 기다릴 필요가 없다.
+  const [{ data: session, error: fetchError }, { data: family }] = await Promise.all([
+    supabase.from("conversation_sessions").select("*").eq("id", params.id).maybeSingle(),
+    supabase.from("families").select("custom_stage_instructions").eq("id", profile.family_id).maybeSingle(),
+  ]);
 
   if (fetchError || !session) {
     return NextResponse.json({ error: "대화 세션을 찾을 수 없어요." }, { status: 404 });
@@ -55,6 +56,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     history: messages,
     questionIndex: answeredCount,
     stage,
+    customStageInstructions: (family?.custom_stage_instructions as Partial<StageInstructions> | null) ?? null,
   });
 
   messages.push({

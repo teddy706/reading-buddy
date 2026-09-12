@@ -54,6 +54,7 @@ Phase 항목의 CLAUDE.md 기록 참고). `server-only`로 막힌 모듈을 테�
    - `0006_grants.sql` — anon/authenticated/service_role 테이블 GRANT (위 1번 참고)
    - `0007_avatar_photo.sql` — 자녀 아바타 사진용 비공개 스토리지 버킷(`avatars`) + `profiles.avatar_photo_path` 컬럼
    - `0008_drop_dokseoro_credentials.sql` — 쓰이지 않는 `dokseoro_credentials` 테이블 제거('독서로' 연동은 수동 등록 가이드로 확정, 위 "'독서로' 연동" 참고)
+   - `0009_custom_stage_instructions.sql` — 부모가 AI의 단계별 질문 지침을 가족 단위로 바꿀 수 있는 `families.custom_stage_instructions` 컬럼
 4. `CHILD_AUTH_SECRET`은 `openssl rand -hex 32`로 생성
 
 ### Azure 셋업

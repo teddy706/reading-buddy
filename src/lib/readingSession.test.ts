@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_STAGE_INSTRUCTIONS,
   FALLBACK_QUESTIONS,
   STAGE_LABELS,
   STAGE_PLAN,
   TOTAL_QUESTIONS,
   fallbackQuestion,
+  resolveStageInstruction,
   stageForQuestionIndex,
 } from "@/lib/readingSession";
 
@@ -38,5 +40,27 @@ describe("fallbackQuestion", () => {
 
   it("범위를 벗어난 인덱스는 범용 문구로 폴백한다", () => {
     expect(fallbackQuestion(TOTAL_QUESTIONS)).toBe("그 책에 대해 더 이야기해줄래?");
+  });
+});
+
+describe("resolveStageInstruction", () => {
+  it("커스텀 지침이 없으면 기본값을 쓴다", () => {
+    expect(resolveStageInstruction(1, null)).toBe(DEFAULT_STAGE_INSTRUCTIONS[1]);
+    expect(resolveStageInstruction(2, undefined)).toBe(DEFAULT_STAGE_INSTRUCTIONS[2]);
+    expect(resolveStageInstruction(3, {})).toBe(DEFAULT_STAGE_INSTRUCTIONS[3]);
+  });
+
+  it("해당 단계에 커스텀 지침이 있으면 그걸 쓴다", () => {
+    expect(resolveStageInstruction(1, { 1: "우리 가족만의 1단계 지침" })).toBe("우리 가족만의 1단계 지침");
+  });
+
+  it("커스텀 지침이 공백뿐이면 기본값으로 취급한다", () => {
+    expect(resolveStageInstruction(2, { 2: "   " })).toBe(DEFAULT_STAGE_INSTRUCTIONS[2]);
+  });
+
+  it("일부 단계만 커스텀해도 나머지 단계는 기본값을 유지한다", () => {
+    const custom = { 1: "커스텀 1단계" };
+    expect(resolveStageInstruction(1, custom)).toBe("커스텀 1단계");
+    expect(resolveStageInstruction(2, custom)).toBe(DEFAULT_STAGE_INSTRUCTIONS[2]);
   });
 });
