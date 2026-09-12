@@ -2,10 +2,18 @@
 
 import { useState } from "react";
 import type { ReadingCoachStage } from "@/lib/types";
-import type { StageInstructions } from "@/lib/readingSession";
+import { STAGE_PLAN, type StageInstructions } from "@/lib/readingSession";
 import { COACH_PRESETS, type CoachPreset } from "@/lib/coachPresets";
 
 const STAGES: ReadingCoachStage[] = [1, 2, 3];
+// 단계별 질문 개수 — 지침 문구가 "이 단계에서 몇 번 물어보게 될지"를 라벨에 같이 보여주기
+// 위함(STAGE_PLAN=[1,1,2,3]과 항상 같은 소스를 씀). 아이 답변이 너무 짧으면 팔로업으로
+// 실제로는 더 많이 물어볼 수 있는데, 그건 이 개수에 포함되지 않는다(위 안내 문구에서 설명).
+const QUESTION_COUNT_BY_STAGE: Record<ReadingCoachStage, number> = {
+  1: STAGE_PLAN.filter((s) => s === 1).length,
+  2: STAGE_PLAN.filter((s) => s === 2).length,
+  3: STAGE_PLAN.filter((s) => s === 3).length,
+};
 // 서버(/api/family/coach-settings)의 MAX_LENGTH와 반드시 같은 값을 유지할 것 — 여기서는
 // 저장 전에 미리 글자 수를 보여주고 넘으면 막는 용도로만 쓴다(진짜 검증은 서버가 한다).
 const MAX_LENGTH = 500;
@@ -166,7 +174,7 @@ export function CoachSettingsForm({
         <div key={stage} className="mb-3">
           <div className="mb-1 flex items-baseline justify-between">
             <label className="text-sm font-semibold text-soft">
-              {stage}단계 · {stageLabels[stage]}
+              {stage}단계 · {stageLabels[stage]} · 질문 {QUESTION_COUNT_BY_STAGE[stage]}개{stage === 3 && " · 마지막"}
             </label>
             <span className={`text-xs ${values[stage].length > MAX_LENGTH ? "font-semibold text-red-500" : "text-soft"}`}>
               {values[stage].length}/{MAX_LENGTH}자
