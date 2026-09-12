@@ -43,6 +43,13 @@ body {
   .app-shell {
     @apply mx-auto flex min-h-screen max-w-[480px] flex-col px-4 pb-24 pt-6;
   }
+  /* 부모 전용 화면(/settings/**)에서만 쓴다 — 아이가 쓰는 화면(대화/OCR/프로필 선택/PIN 등)은
+     터치 조작 위주로 설계돼 있어 모바일 폭을 그대로 유지한다. 태블릿/PC로 설정 화면을 보는
+     부모를 위해 폭만 단계적으로 넓히고(md/lg), 좁은 화면에서는 기존 .app-shell과 동일하게
+     동작한다(2026-09-12, "부모용 화면 위주로 먼저" 사용자 요청). */
+  .app-shell-wide {
+    @apply mx-auto flex min-h-screen max-w-[480px] flex-col px-4 pb-24 pt-6 md:max-w-2xl md:px-8 lg:max-w-5xl;
+  }
   .card {
     @apply mb-3.5 rounded-card border-2 border-ink bg-white p-5 shadow-card;
   }

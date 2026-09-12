@@ -27,17 +27,21 @@ export default async function SettingsChildrenPage() {
   );
 
   return (
-    <div className="app-shell">
+    <div className="app-shell-wide">
       <BackLink href="/settings" />
       <h1 className="mb-6 text-center text-2xl font-bold">자녀 프로필 관리</h1>
 
-      {childProfiles.map((child) => (
-        <ChildEditCard
-          key={child.id}
-          child={child}
-          photoUrl={child.avatar_photo_path ? (photoUrls.get(child.avatar_photo_path) ?? null) : null}
-        />
-      ))}
+      {/* lg부터 2열 — 카드 안 이모지 아바타 그리드(8열)가 촘촘해서, 폭이 충분히 넓어지는
+          lg(1024px) 이상에서만 2열로 나눈다(md에서 2열로 쪼개면 오히려 더 좁아짐). */}
+      <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
+        {childProfiles.map((child) => (
+          <ChildEditCard
+            key={child.id}
+            child={child}
+            photoUrl={child.avatar_photo_path ? (photoUrls.get(child.avatar_photo_path) ?? null) : null}
+          />
+        ))}
+      </div>
 
       <Link href="/profiles/new" className="btn btn-outline">
         + 프로필 추가

@@ -65,7 +65,7 @@ export default async function StatsPage() {
   const totalRecords = readingRecords.length;
 
   return (
-    <div className="app-shell">
+    <div className="app-shell-wide">
       <BackLink href="/settings" />
       <h1 className="mb-6 text-center text-2xl font-bold">독서 통계</h1>
 
@@ -130,7 +130,8 @@ export default async function StatsPage() {
           </div>
 
           {totalRecords > 0 && (
-            <>
+            // md부터 두 카드를 나란히 — 둘 다 짧은 요약 카드라 세로로 길게 쌓일 필요가 없다.
+            <div className="md:grid md:grid-cols-2 md:items-start md:gap-4">
               <div className="card">
                 <p className="mb-3 font-bold">기록 방식</p>
                 {(Object.keys(sourceCounts) as RecordSourceType[]).map((type) => (
@@ -162,7 +163,7 @@ export default async function StatsPage() {
                   </div>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </>
       )}

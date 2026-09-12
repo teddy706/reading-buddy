@@ -211,6 +211,22 @@ PRD 4.2 "MVP 이후 로드맵" 후보 중 사용자가 명시적으로 아래 4�
 - `useSearchParams()`를 쓰는 클라이언트 컴포넌트는 Next.js가 `<Suspense>`로 감싸도록 요구해서(안 그러면 `next build` 시 "missing-suspense-with-csr-bailout" 오류), `settings/records/page.tsx`에서 `<ChildRecordsTabs>`를 `<Suspense fallback={null}>`로 감쌈.
 - 배포 후 사용자가 프로덕션에서 직접 재현·확인 — 두 번째 자녀 탭 선택 → 기록 열기 → 뒤로 나왔을 때 그 탭이 그대로 유지됨을 확인함("확인했어 오류가 해결됐어").
 
+## 부모 설정 화면 태블릿/PC 대응 (2026-09-12)
+
+사용자가 "모바일에서만 보이게 설계된 것 같은데 PC/패드에서도 쓰려면 얼마나 어려울까"라고 물어봄. 코드를 보니 전 화면이 `.app-shell`(고정 `max-width: 480px`) 클래스 하나로 통일돼 있어서 원인은 명확했고, "부모용 화면 위주로 먼저 진행해줘"라는 답을 받아 `/settings/**`(부모 전용, `requireParentProfile`로 막힌 화면)만 넓혔다 — 아이가 쓰는 화면(대화/OCR/프로필 선택/PIN/홈)은 터치 조작 위주로 설계돼 있어 그대로 좁게 유지한다.
+
+- **`globals.css`에 `.app-shell-wide` 신설**: `max-w-[480px]`(모바일)는 그대로 두고 `md:max-w-2xl`(태블릿), `lg:max-w-5xl`(PC)로 단계적으로 넓힘. 기존 `.app-shell`은 손대지 않아 다른 화면은 전혀 영향받지 않는다.
+- **`/settings`, `/settings/stats`, `/settings/badges`, `/settings/children`, `/settings/coach`, `/settings/records`** 여섯 화면을 `.app-shell` → `.app-shell-wide`로 교체.
+- 화면별 내용 배치도 폭에 맞게 조정:
+  - `/settings`: 5개 메뉴 카드를 `md:grid-cols-2`로.
+  - `/settings/children`: 자녀 카드를 `lg:grid-cols-2`로(카드 안 이모지 아바타가 8열로 촘촘해서 `md`가 아니라 `lg`부터 — `md`에서 2열로 쪼개면 각 카드가 오히려 원래 모바일 폭보다 좁아짐).
+  - `/settings/badges`: 자녀 카드를 `lg:grid-cols-2`로("비교"가 목적인 화면이라 나란히 놓는 게 자연스러움).
+  - `/settings/coach`: 그리드로 나누는 대신, 지침 문구를 읽고 고치는 화면 특성상 `md:max-w-xl`로 폭을 오히려 제한해 가독성 유지(넓게 쭉 늘어난 한 줄은 읽기 불편함).
+  - `/settings/stats`: "기록 방식"·"독서로 반영 현황" 카드를 `md:grid-cols-2`로. 자녀별 통계 카드는 기존에 이미 `auto-fit` 그리드라 손대지 않음.
+  - `/settings/records`(`RecordsBrowser`): 검색창+날짜 필터를 `md:flex`로 한 줄에, 기록 카드를 `md:grid-cols-2 lg:grid-cols-3`로 배치.
+- **`RecordsBrowser`는 자녀 본인 화면(`/records`)과 공유하는 컴포넌트**라 새 `layout?: "list" | "grid"` prop을 추가해 기본값(`"list"`, 기존과 동일)을 유지하고, `ChildRecordsTabs`(부모 화면 전용)에서만 `layout="grid"`를 넘긴다 — `/records/page.tsx`(자녀)는 prop을 안 넘기므로 넓은 화면에서 봐도 항상 기존과 동일한 1열 리스트 그대로다. 그리드 모드에서는 `RecordCard`의 기본 `mb-3.5`가 `gap-3`와 겹쳐 행 간격만 유독 벌어지는 걸 `[&>*]:mb-0`으로 정리.
+- **`BadgeGrid`는 건드리지 않음**: 처음엔 `sm:grid-cols-4`로 넓혀볼까 했으나, 이 컴포넌트가 자녀 홈(`/home`, "내 배지" 섹션)에서도 그대로 재사용되고 있어서 — 부모 화면만 넓히려던 변경이 자녀 화면에도 새어나갈 뻔한 걸 검토 중 발견하고 되돌렸다. **공유 컴포넌트를 수정할 때는 어디서 재사용되는지(특히 자녀 화면 vs 부모 화면) 항상 먼저 확인할 것.**
+
 ## 참고 문서
 
 - [docs/PRD.md](docs/PRD.md) — 전체 PRD (v1.8)

@@ -63,7 +63,7 @@ flowchart LR
 | 영역 | 기술 | 비고 |
 |---|---|---|
 | 프론트엔드 프레임워크 | Next.js 14.2.35 (App Router) | 서버 컴포넌트 위주, 클라이언트 컴포넌트는 폼/대화형 UI에 한정 |
-| UI | React 18 + Tailwind CSS | 차트도 별도 라이브러리 없이 순수 CSS(`div` 비율)로 구현(6.2 참고) |
+| UI | React 18 + Tailwind CSS | 차트도 별도 라이브러리 없이 순수 CSS(`div` 비율)로 구현(6.2 참고). 기본은 모바일 전용 고정폭(`.app-shell`, 480px)이고, 부모 전용 화면(`/settings/**`)만 `.app-shell-wide`로 태블릿/PC에서 단계적으로 넓어짐(2026-09-12, §6.8 참고) |
 | 언어 | TypeScript | `tsc --noEmit`로 타입 검사 |
 | DB/Auth/Storage | Supabase (`@supabase/supabase-js`, `@supabase/ssr`) | Postgres 15, RLS 활성화 |
 | AI SDK | `openai` npm 패키지 | Azure OpenAI를 OpenAI 호환 엔드포인트로 호출(baseURL을 Azure로 지정) |
@@ -283,6 +283,13 @@ flowchart TD
 
 - 별도 집계 테이블 없이 **매 요청마다 `reading_records`에서 즉석 계산**한다(`readingStats.ts`, `badges.ts`) — 스키마 변경 없이 구현하기 위한 선택.
 - 자녀 세션은 RLS상 형제자매의 `reading_records`를 볼 수 없다(의도된 프라이버시 경계). "이달의 다독왕" 배지 계산에 한해서만 `siblingReadingCounts.ts`가 **서비스 역할로 `child_profile_id`/`recorded_at`(집계용 두 컬럼만)**을 좁게 조회한다 — 책 제목·내용은 절대 조회하지 않음.
+
+### 6.8 반응형 레이아웃 (부모 전용 화면만)
+
+- 기본 UI는 아이의 터치 조작을 전제로 **고정폭 모바일 레이아웃**(`.app-shell`, `max-width: 480px`)이다 — 대화/OCR/프로필 선택/PIN/홈 등 자녀가 쓰는 모든 화면과 로그인/가입 화면이 여기 해당하며, 그대로 유지한다.
+- `/settings/**`(부모 전용, `requireParentProfile`로 막힘) 6개 화면만 `.app-shell-wide`(`md:max-w-2xl`, `lg:max-w-5xl`)로 태블릿/PC에서 단계적으로 넓어진다. 화면별로 내용 배치도 함께 조정했다(메뉴/자녀 카드를 `md`~`lg`부터 여러 열로, `/settings/coach`는 반대로 가독성을 위해 폭을 제한).
+- `RecordsBrowser`(기록 목록)는 자녀 본인 화면(`/records`)과 부모 화면(`/settings/records`)이 공유하는 컴포넌트라, `layout?: "list" | "grid"` prop(기본값 `"list"`)으로 넓은 배치를 옵트인시켰다 — 부모 화면(`ChildRecordsTabs`)만 `layout="grid"`를 넘겨 `md:grid-cols-2 lg:grid-cols-3` 배치를 켜고, 자녀 화면은 prop을 넘기지 않아 화면 크기와 무관하게 항상 1열 리스트 그대로다.
+- **공유 컴포넌트를 넓힐 때는 재사용처를 먼저 확인할 것** — `BadgeGrid`(배지 그리드)는 부모의 `/settings/badges`뿐 아니라 자녀 홈(`/home`)에서도 재사용되고 있어서, 컬럼 수를 반응형으로 바꾸려던 시도를 되돌렸다(자녀 화면까지 새어나갈 뻔함).
 
 ---
 

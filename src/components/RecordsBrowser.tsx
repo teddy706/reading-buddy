@@ -27,9 +27,14 @@ export function toIlikePattern(value: string): string {
 export function RecordsBrowser({
   childId,
   initialRecords,
+  layout = "list",
 }: {
   childId: string;
   initialRecords: ReadingRecord[];
+  // "grid"는 부모 대시보드(/settings/records, ChildRecordsTabs)처럼 넓은 화면(태블릿/PC)에서
+  // 여러 열로 보여줄 여유가 있는 곳에서만 켠다 — 자녀 본인 화면(/records)은 항상 좁은 모바일
+  // 폭 하나만 지원하므로 기본값(list)을 그대로 쓴다(2026-09-12, "부모용 화면 위주로 먼저").
+  layout?: "list" | "grid";
 }) {
   const hasAnyRecordsEver = initialRecords.length > 0;
 
@@ -120,33 +125,45 @@ export function RecordsBrowser({
 
   return (
     <div>
-      <input
-        type="search"
-        value={rawQuery}
-        onChange={(e) => setRawQuery(e.target.value)}
-        placeholder="책 제목이나 내용으로 검색"
-        className="input"
-      />
-      <div className="mb-2.5 flex gap-2">
+      {/* md 이상 넓은 화면에서는 검색창+날짜를 한 줄로 — 좁은 화면에서는 지금처럼 세로로 쌓인다. */}
+      <div className="md:flex md:items-start md:gap-2">
         <input
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          aria-label="시작일"
-          className="input mb-0"
+          type="search"
+          value={rawQuery}
+          onChange={(e) => setRawQuery(e.target.value)}
+          placeholder="책 제목이나 내용으로 검색"
+          className="input md:mb-2.5 md:flex-1"
         />
-        <input
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          aria-label="종료일"
-          className="input mb-0"
-        />
+        <div className="mb-2.5 flex gap-2 md:mb-2.5 md:shrink-0">
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            aria-label="시작일"
+            className="input mb-0"
+          />
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            aria-label="종료일"
+            className="input mb-0"
+          />
+        </div>
       </div>
 
       {records.length === 0 && !loading ? (
         <div className="card text-center text-sm text-soft">
           {hasFilter ? "검색 결과가 없어요." : "아직 기록한 책이 없어요."}
+        </div>
+      ) : layout === "grid" ? (
+        // [&>*]:mb-0: RecordCard(.card)가 자체적으로 갖고 있는 아래쪽 margin을 그리드 안에서는
+        // 꺼서, 행 사이 간격을 gap-3 하나로만 통일한다(margin+gap이 겹쳐 행 간격만 유독
+        // 넓어지는 것을 방지).
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 [&>*]:mb-0">
+          {records.map((r) => (
+            <RecordCard key={r.id} record={r} />
+          ))}
         </div>
       ) : (
         records.map((r) => <RecordCard key={r.id} record={r} />)

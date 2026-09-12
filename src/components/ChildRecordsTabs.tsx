@@ -62,7 +62,7 @@ export function ChildRecordsTabs({
 
       {/* key로 강제 리마운트: 탭을 바꾸면 검색어/스크롤 페이지 등 이전 자녀의 상태가
           그대로 남지 않고 새 initialRecords로 깨끗하게 시작한다. */}
-      <RecordsBrowser key={active.child.id} childId={active.child.id} initialRecords={active.initialRecords} />
+      <RecordsBrowser key={active.child.id} childId={active.child.id} initialRecords={active.initialRecords} layout="grid" />
     </div>
   );
 }
