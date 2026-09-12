@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 
-export function LogoutButton({ label = "로그아웃" }: { label?: string }) {
+export function LogoutButton({ label = "로그아웃", className = "btn btn-ghost mb-0" }: { label?: string; className?: string }) {
   const router = useRouter();
 
   async function onClick() {
@@ -12,7 +12,7 @@ export function LogoutButton({ label = "로그아웃" }: { label?: string }) {
   }
 
   return (
-    <button type="button" onClick={onClick} className="btn btn-ghost mb-0">
+    <button type="button" onClick={onClick} className={className}>
       {label}
     </button>
   );

@@ -57,7 +57,7 @@ export default async function HomePage() {
           <Avatar emoji={child.avatar} photoUrl={photoUrl} />
           <h1 className="text-xl font-bold">{child.name}의 책장</h1>
         </div>
-        <LogoutButton label="나가기" />
+        <LogoutButton label="나가기" className="btn-pill" />
       </div>
 
       <Link href="/read/new" className="btn btn-primary">
@@ -78,7 +78,7 @@ export default async function HomePage() {
 
       <div className="mb-2 flex items-center justify-between">
         <p className="font-bold">최근 기록</p>
-        <Link href="/records" className="text-sm font-semibold text-accent underline">
+        <Link href="/records" className="btn-pill">
           전체 보기
         </Link>
       </div>
