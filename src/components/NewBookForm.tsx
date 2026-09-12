@@ -30,6 +30,10 @@ export function NewBookForm() {
   // 후보를 골라서 title을 프로그램적으로 채운 직후엔, 같은 값으로 다시 검색해서 방금 접은
   // 목록이 곧바로 다시 뜨는 걸 막는다.
   const skipNextTitleSearchRef = useRef(false);
+  // 검색 결과가 0건이면 서버가 AI 오타 교정까지 시도하느라 그 요청만 유독 느려질 수 있다
+  // (book-search route 참고). 그사이 아이가 계속 타이핑해서 더 최신 검색이 먼저 끝나면,
+  // 늦게 도착한 옛 응답이 최신 결과를 덮어쓰지 않도록 "가장 최근에 보낸 검색어"만 반영한다.
+  const latestQueryRef = useRef("");
 
   useEffect(() => {
     if (skipNextTitleSearchRef.current) {
@@ -43,14 +47,17 @@ export function NewBookForm() {
       return;
     }
     const timer = setTimeout(async () => {
+      latestQueryRef.current = query;
       try {
         const res = await fetch(`/api/book-search?q=${encodeURIComponent(query)}`);
         const data = await res.json();
+        if (latestQueryRef.current !== query) return;
         setTitleSuggestions((data.candidates ?? []) as BookCandidate[]);
       } catch {
+        if (latestQueryRef.current !== query) return;
         setTitleSuggestions([]);
       } finally {
-        setLastSearchedQuery(query);
+        if (latestQueryRef.current === query) setLastSearchedQuery(query);
       }
     }, TITLE_SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
