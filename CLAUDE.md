@@ -209,6 +209,7 @@ PRD 4.2 "MVP 이후 로드맵" 후보 중 사용자가 명시적으로 아래 4�
 - 선택된 탭을 로컬 state 대신 **URL 쿼리 파라미터(`?child=<id>`)**로 관리하도록 바꿈 — 탭 클릭 시 `router.replace`로 URL을 갱신하고, 마운트 시 그 쿼리값을 초기 탭으로 읽는다.
 - `records/[id]/page.tsx`의 부모용 `backHref`가 `/settings/records`(고정) 대신 `/settings/records?child=${record.child_profile_id}`를 넘기도록 수정 — 기록의 주인이 누구인지는 이미 알고 있으니, 그 자녀 id를 그대로 쿼리에 실어 보내면 "뒤로" 갔을 때 자연스럽게 그 자녀 탭이 선택된다.
 - `useSearchParams()`를 쓰는 클라이언트 컴포넌트는 Next.js가 `<Suspense>`로 감싸도록 요구해서(안 그러면 `next build` 시 "missing-suspense-with-csr-bailout" 오류), `settings/records/page.tsx`에서 `<ChildRecordsTabs>`를 `<Suspense fallback={null}>`로 감쌈.
+- 배포 후 사용자가 프로덕션에서 직접 재현·확인 — 두 번째 자녀 탭 선택 → 기록 열기 → 뒤로 나왔을 때 그 탭이 그대로 유지됨을 확인함("확인했어 오류가 해결됐어").
 
 ## 참고 문서
 
