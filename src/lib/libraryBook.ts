@@ -28,9 +28,12 @@ export async function searchLibraryBooks(query: string, size = 5): Promise<BookC
   if (!authKey || !query.trim()) return [];
 
   try {
+    // title 파라미터를 쓴다 — keyword 파라미터는 매뉴얼상 "일치검색 결과만 제공"이라
+    // 완전히 같은 제목이 아니면 안 걸린다. title은 기본이 비일치검색(부분 일치)이라
+    // 아이가 제목을 다 안 쳤을 때도 자동완성 후보가 뜬다.
     const params = new URLSearchParams({
       authKey,
-      keyword: query.trim(),
+      title: query.trim(),
       pageNo: "1",
       pageSize: String(size),
       format: "json",
