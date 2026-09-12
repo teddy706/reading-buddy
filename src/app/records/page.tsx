@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireChildProfile } from "@/lib/currentProfile";
 import { createClient } from "@/lib/supabase/server";
-import { RecordCard } from "@/components/RecordCard";
+import { RecordsList } from "@/components/RecordsList";
 import type { ReadingRecord } from "@/lib/types";
 
 export default async function RecordsPage() {
@@ -20,11 +20,7 @@ export default async function RecordsPage() {
     <div className="app-shell">
       <h1 className="mb-6 text-center text-2xl font-bold">내가 기록한 책</h1>
 
-      {readingRecords.length === 0 ? (
-        <div className="card text-center text-sm text-soft">아직 기록한 책이 없어요.</div>
-      ) : (
-        readingRecords.map((r) => <RecordCard key={r.id} record={r} />)
-      )}
+      <RecordsList records={readingRecords} />
 
       <Link href="/home" className="btn btn-ghost mt-auto mb-0">
         뒤로
