@@ -1,4 +1,4 @@
-# CLAUDE.md — 리딩버디 (독서 기록 앱)
+# CLAUDE.md — 도란도란 (구 가칭: 리딩버디, 독서 기록 앱)
 
 이 파일은 프로젝트 루트에 두고 Claude Code가 매 세션 시작 시 참고하는 컨텍스트 문서입니다. **Phase 1의 5개 항목이 모두 구현·실제 브라우저 테스트 완료되었습니다("4. '독서로' 자동 연동"은 사용자가 명시적으로 선택한 "수동 등록 가이드" 버전으로 완료 — Playwright 자동화는 만들지 않음, 아래 4번 항목 참고).**
 
@@ -254,9 +254,30 @@ PRD 4.2 "MVP 이후 로드맵" 후보 중 사용자가 명시적으로 아래 4�
 - `/settings/coach` 페이지에 안내 박스 추가: "질문은 보통 1단계 2개 → 2단계 1개 → 3단계 1개, 총 4개로 진행되지만, 아이 답변이 너무 짧으면 같은 단계에서 한 번 더 캐물을 수 있어 실제 질문 수는 4개보다 많아질 수 있다"는 것과, "그 팔로업 질문의 말투는 고정돼 있어 이 화면의 지침으로는 못 바꾼다"는 것(팔로업 문구는 `azureOpenAI.ts`에 하드코딩돼 있음, `readingSession.ts`의 `isAnswerTooShort`/`MAX_FOLLOW_UPS_PER_STAGE` 참고)을 명시.
 - `CoachSettingsForm`의 각 단계 라벨에 "질문 N개"를 추가(`STAGE_PLAN`에서 계산, `1단계 · 장면 소환 · 질문 2개`처럼 표시), 3단계에는 "· 마지막"도 붙임.
 
+## 공식 명칭 '도란도란' 확정 및 PWA 아이콘/브랜딩 적용 (2026-09-13)
+
+사용자 요청: "repository를 읽고 개발 내역을 파악해줘. 앱을 나타내는 앱의 이름과 아이콘을 디자인하자".
+코드베이스 분석 후 4가지 네이밍 방향과 3가지 아이콘 디자인 시안(펼쳐진 책+말풍선 / 헤드폰 책 마스코트 / 쌍둥이 북 & 북마크)을 제안했고, 사용자가 **"A 도란도란으로 진행하자"**로 선택함.
+
+- **앱 명칭 확정**: 가칭 '리딩버디'에서 **'도란도란(DoranDoran)'**으로 공식 확정.
+- **PWA 아이콘 및 파비콘 생성**:
+  - 선택된 시안 A(크림색 배경, 따뜻한 양장본 책 위에 세이지 그린과 소프트 블루의 미소 짓는 두 말풍선)를 기반으로 고해상도 에셋 세트 생성.
+  - `public/icons/icon-192x192.png`, `public/icons/icon-512x512.png` (PWA 표준)
+  - `public/icons/icon-maskable-192x192.png`, `public/icons/icon-maskable-512x512.png` (안드로이드 적응형 안전영역 마스커블 아이콘)
+  - `public/apple-touch-icon.png`, `public/icons/apple-touch-icon.png` (iOS 홈 화면)
+  - `public/favicon.ico`, `public/favicon-16x16.png`, `public/favicon-32x32.png` (브라우저 파비콘)
+- **메타데이터 및 PWA 설정**:
+  - `public/manifest.json`: 앱 이름 `도란도란`, 설명 `대화와 사진으로 남기는 우리 아이 독서 기록`, 아이콘 목록 갱신.
+  - `src/app/layout.tsx`: `metadata.title`을 `도란도란 - 대화로 남기는 독서 기록`으로 변경, 파비콘/터치아이콘 링크 설정.
+- **로그인 화면 브랜드 UI 반영**:
+  - `src/app/login/page.tsx`: 기존 텍스트 이모지(`📚 리딩버디`)를 제거하고 Next.js `<Image />` 컴포넌트로 공식 도란도란 로고 아이콘과 브랜드명을 깔끔하게 배치.
+- **배포 및 검증**:
+  - 로컬 프로덕션 빌드(`npm run build`) 30개 정적/동적 라우트 검증 완료.
+  - GitHub push → Vercel 자동 배포 완료 (`https://reading-buddy-ten.vercel.app/login`에서 200 OK 및 도란도란 타이틀/로고 노출 확인).
+
 ## 참고 문서
 
-- [docs/PRD.md](docs/PRD.md) — 전체 PRD (v1.8)
+- [docs/PRD.md](docs/PRD.md) — 전체 PRD (v1.9)
 - [docs/BRIEF.md](docs/BRIEF.md) — 프로젝트 브리프(5분 요약)
 - [docs/STORIES.md](docs/STORIES.md) — 기능 단위 사용자 스토리(전부 구현 완료 상태)
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — 실제 구현 기준 기술 아키텍처(PRD 6장의 계획과 다른 부분 포함)

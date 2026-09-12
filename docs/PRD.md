@@ -1,8 +1,8 @@
 # 독서 기록 앱 PRD (Product Requirements Document)
 
-**문서 버전:** v1.8
-**작성일:** 2026-09-10 (최종 갱신: 2026-09-12)
-**프로젝트명(가칭):** 리딩버디 (Reading Buddy) — 추후 변경 가능
+**문서 버전:** v1.9  
+**작성일:** 2026-09-10 (최종 갱신: 2026-09-13)  
+**프로젝트명:** 도란도란 (DoranDoran) — 구 가칭: 리딩버디 (Reading Buddy)
 
 > 함께 보면 좋은 문서: [BRIEF.md](BRIEF.md)(5분 요약) · [STORIES.md](STORIES.md)(기능 단위 사용자 스토리) · [ARCHITECTURE.md](ARCHITECTURE.md)(실제 구현 기준 기술 아키텍처)
 
