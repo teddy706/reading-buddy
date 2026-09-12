@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { naverBookSearchUrl } from "@/lib/externalBookSearch";
 
 export function OcrReview({
   uploadId,
@@ -78,7 +79,19 @@ export function OcrReview({
         className="input"
       />
 
-      <label className="mb-1 text-sm font-semibold text-soft">책 페이지 수 (책 뒷면·마지막 쪽에 있어요)</label>
+      <div className="mb-1 flex items-center justify-between">
+        <label className="text-sm font-semibold text-soft">책 페이지 수 (책 뒷면·마지막 쪽에 있어요)</label>
+        {bookTitle.trim() && (
+          <a
+            href={naverBookSearchUrl(bookTitle)}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs font-semibold text-accent underline"
+          >
+            🔍 찾아보기
+          </a>
+        )}
+      </div>
       <input
         type="number"
         inputMode="numeric"

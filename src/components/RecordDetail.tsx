@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { BackLink } from "@/components/BackLink";
 import { DokseoroStatusBadge } from "@/components/DokseoroStatusBadge";
+import { naverBookSearchUrl } from "@/lib/externalBookSearch";
 import type { ConversationMessage, ReadingRecord } from "@/lib/types";
 
 const SOURCE_LABEL: Record<ReadingRecord["source_type"], string> = {
@@ -155,7 +156,19 @@ export function RecordDetail({
       <label className="mb-1 text-sm font-semibold text-soft">책 제목</label>
       <input value={bookTitle} onChange={(e) => setBookTitle(e.target.value)} className="input" />
 
-      <label className="mb-1 text-sm font-semibold text-soft">책 페이지 수</label>
+      <div className="mb-1 flex items-center justify-between">
+        <label className="text-sm font-semibold text-soft">책 페이지 수</label>
+        {bookTitle.trim() && (
+          <a
+            href={naverBookSearchUrl(bookTitle, record.book_author)}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs font-semibold text-accent underline"
+          >
+            🔍 찾아보기
+          </a>
+        )}
+      </div>
       <input
         type="number"
         inputMode="numeric"
