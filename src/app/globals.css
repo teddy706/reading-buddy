@@ -15,7 +15,9 @@ body {
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  /* --font-pretendard는 layout.tsx의 next/font/local이 만든다(2026-09-12, 사용자 요청).
+     혹시 폰트 로드가 늦어질 때를 대비해 시스템 한글 폰트를 폴백으로 남겨둔다. */
+  font-family: var(--font-pretendard), -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   touch-action: manipulation;
 }
 

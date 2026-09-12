@@ -64,6 +64,7 @@ flowchart LR
 |---|---|---|
 | 프론트엔드 프레임워크 | Next.js 14.2.35 (App Router) | 서버 컴포넌트 위주, 클라이언트 컴포넌트는 폼/대화형 UI에 한정 |
 | UI | React 18 + Tailwind CSS | 차트도 별도 라이브러리 없이 순수 CSS(`div` 비율)로 구현(6.2 참고). 모바일은 고정폭(`.app-shell`, 480px), 태블릿/PC에서는 전 화면이 단계적으로 넓어짐(2026-09-12, §6.8 참고) |
+| 폰트 | 프리텐다드(Pretendard) Variable | `next/font/local`로 셀프 호스팅(`src/app/fonts/PretendardVariable.woff2`). 원래 있던 Geist 폰트 로딩은 CSS 어디에서도 참조되지 않는 죽은 설정이었음(2026-09-12 교체 시 발견) |
 | 언어 | TypeScript | `tsc --noEmit`로 타입 검사 |
 | DB/Auth/Storage | Supabase (`@supabase/supabase-js`, `@supabase/ssr`) | Postgres 15, RLS 활성화 |
 | AI SDK | `openai` npm 패키지 | Azure OpenAI를 OpenAI 호환 엔드포인트로 호출(baseURL을 Azure로 지정) |

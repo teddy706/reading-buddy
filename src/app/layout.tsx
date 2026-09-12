@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
+// 한글 가독성을 위해 프리텐다드(Pretendard)로 교체(2026-09-12, 사용자 요청). 가변 폰트
+// 하나로 전체 굵기(45~920)를 커버해서 굵기별 파일을 따로 둘 필요가 없다. next/font/local로
+// 셀프 호스팅해 별도 네트워크 요청(CDN) 없이 빌드에 포함시킨다 — Next.js가 자동으로 폰트를
+// 프리로드하고 layout shift를 방지해준다.
+const pretendard = localFont({
+  src: "./fonts/PretendardVariable.woff2",
+  variable: "--font-pretendard",
+  weight: "45 920",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -30,9 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${pretendard.variable} antialiased`}>
         {children}
       </body>
     </html>

@@ -228,6 +228,15 @@ PRD 4.2 "MVP 이후 로드맵" 후보 중 사용자가 명시적으로 아래 4�
 - `/profiles`(프로필 선택 — `requireParentProfile`로 막힌 부모 전용 화면) 카드 그리드를 `grid-cols-2` 고정에서 `sm:grid-cols-3 md:grid-cols-4`로, `/read/new`(기록 방식 선택) 두 카드를 `md:grid-cols-2`로.
 - **결과적으로 앱의 모든 화면이 `.app-shell-wide`를 쓰게 되면서, 원래의 좁은 전용 `.app-shell`이 완전히 죽은 클래스가 됨** — `.app-shell`의 정의 자체를 `.app-shell-wide`의 반응형 규칙으로 바꾸고 `.app-shell-wide`는 삭제한 뒤, 모든 파일에서 `app-shell-wide` 클래스명을 다시 `app-shell`로 일괄 치환해 하나로 합쳤다. 화면별로 폭을 제한해야 하는 곳은 여전히 각 페이지 내부의 `mx-auto max-w-*` 래퍼가 담당한다.
 
+## 글꼴을 프리텐다드(Pretendard)로 교체 (2026-09-12)
+
+사용자 요청. 확인해보니 기존 `layout.tsx`의 Geist 폰트 로딩(`next/font/local`)이 CSS 변수(`--font-geist-sans`/`--font-geist-mono`)만 만들어두고 실제로는 `globals.css`의 `body` 규칙이나 `tailwind.config.ts`(`theme.fontFamily` 없음) 어디에서도 그 변수를 참조하지 않아서, **실제 화면에는 처음부터 Geist가 아니라 `globals.css`에 하드코딩된 시스템 폰트 스택**(`-apple-system, ..., "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`)이 렌더링되고 있었다(Next.js 기본 스캐폴딩이 남긴 죽은 설정으로 보임).
+
+- 프리텐다드 가변 폰트(Variable, 전체 굵기 45~920 하나로 커버)를 `next/font/local`로 셀프 호스팅 — CDN `<link>` 대신 빌드에 포함시켜 외부 네트워크 요청 없이 서빙되고, Next.js가 자동으로 프리로드+layout shift 방지까지 처리한다. 파일은 jsdelivr(`cdn.jsdelivr.net/npm/pretendard@latest/...`)에서 받아 `src/app/fonts/PretendardVariable.woff2`로 저장(~2MB, 전체 한글 음절 커버라 가변 폰트치고는 큰 편이지만 이 프로젝트 성격상 통상적인 트레이드오프로 판단).
+- `layout.tsx`: Geist 로딩 코드를 제거하고 `pretendard` 하나로 교체, `body`에 `pretendard.variable`만 적용.
+- `globals.css`: `body`의 `font-family`를 `var(--font-pretendard)`를 최우선으로 하고 기존 시스템 폰트 스택은 폴백으로 남김(폰트 로드가 늦을 때 대비).
+- 이제 진짜로 안 쓰는 `src/app/fonts/GeistVF.woff`/`GeistMonoVF.woff`는 삭제.
+
 ## 참고 문서
 
 - [docs/PRD.md](docs/PRD.md) — 전체 PRD (v1.8)
