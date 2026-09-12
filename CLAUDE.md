@@ -96,6 +96,14 @@ PRD 4.2 "MVP 이후 로드맵" 후보 중 사용자가 명시적으로 아래 4�
 
 `router.push(...); router.refresh();` 패턴(로그인/PIN/로그아웃 직후 여러 곳에 있음)은 일부러 그대로 뒀다 — 형제자매가 같은 URL(`/home` 등)을 서로 다른 세션으로 방문할 때 Next.js Router Cache가 이전 아이의 캐시된 화면을 보여줄 위험이 있어서 넣어둔 방어 코드로 보이고, 섣불리 지우면 "동생 로그인했는데 형 데이터가 잠깐 보이는" 종류의 버그가 재발할 수 있다. 대신 위 3가지로 그 안에서 일어나는 실제 데이터 조회 자체를 빠르게 만드는 방향으로 접근함.
 
+## 유닛 테스트 도입 (2026-09-12)
+
+지금까지 전부 실제 브라우저 수동 검증으로만 확인해왔고 자동 테스트가 하나도 없었다 — 코드 리뷰에서 지적된 항목. Next.js 서버 컴포넌트/API 라우트/RLS 같은 통합 동작까지 자동화하려면 Supabase/Azure를 모킹하는 큰 작업이 필요해서 범위 밖으로 남겨두고, **외부 의존성이 전혀 없는 순수 함수부터** Vitest로 유닛 테스트를 추가했다: `src/lib/readingSession.ts`(단계별 질문 매핑/폴백), `src/lib/badges.ts`(배지 계산, 형제자매 비교 경계값 포함), `src/lib/readingStats.ts`(월별 집계), `src/lib/childAuth.ts`(PIN 검증/잠금 판정, PIN→비밀번호 파생의 결정론성, bcrypt 해시). 총 31개 테스트, `npm run test`로 실행(README "테스트" 절 참고).
+
+- `server-only`로 막힌 모듈(`childAuth.ts` 등)을 일반 Node 런타임(vitest)에서 그냥 import하면 그 패키지 자체가 무조건 예외를 던진다(react-server 조건이 있을 때만 빈 모듈로 치환되는 구조라, Next.js 빌드 밖에서는 항상 실제 `index.js`가 로드됨) — `vitest.config.mts`에서 `server-only`를 `test/stubs/server-only.ts`(빈 모듈)로 alias해서 우회함
+- vitest 최신 메이저(5.x)는 peer로 `@types/node@^22`/`vite@^6~8`을 요구해 이 프로젝트의 `@types/node@^20`과 충돌 — 굳이 그 버전을 맞추려고 프로젝트 전체의 `@types/node`를 올리는 대신, vite를 직접 의존성으로 갖고 있고 peer 요구가 느슨한 `vitest@^2.1.9`로 설치함
+- 이 커밋 이후 새로 추가하는 순수 로직(외부 API 호출 없이 입력→출력만 있는 함수)에는 유닛 테스트를 같이 추가하는 게 좋다 — 이미 `vitest.config.mts`가 `src/**/*.test.ts`를 자동으로 주워간다
+
 ## 참고 문서
 
 - [docs/PRD.md](docs/PRD.md) — 전체 PRD (v1.5)

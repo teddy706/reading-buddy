@@ -22,6 +22,19 @@ cp .env.local.example .env.local   # 값 채우기
 npm run dev
 ```
 
+### 테스트
+
+```bash
+npm run test         # 한 번 실행
+npm run test:watch   # watch 모드
+```
+
+`src/lib/*.test.ts`(Vitest)만 있다 — 외부 의존성(Supabase/Azure/카카오) 없이 순수하게 계산만 하는
+로직(PIN 검증/잠금, 단계별 질문 폴백, 배지 계산, 통계 집계)만 유닛 테스트로 다루고, Next.js
+서버 컴포넌트/API 라우트/RLS 같은 통합 동작은 지금까지처럼 실제 브라우저로 수동 검증한다(각
+Phase 항목의 CLAUDE.md 기록 참고). `server-only`로 막힌 모듈을 테스트에서 import할 수 있도록
+`vitest.config.mts`가 그 패키지를 빈 모듈(`test/stubs/server-only.ts`)로 치환해둔다.
+
 ### Supabase 셋업
 
 1. [supabase.com](https://supabase.com)에서 새 프로젝트 생성 (무료 티어). 생성 화면의 Security 섹션에서
