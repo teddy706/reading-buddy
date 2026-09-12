@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { requireChildProfile } from "@/lib/currentProfile";
 import { createClient } from "@/lib/supabase/server";
+import { BackLink } from "@/components/BackLink";
 import { RecordsBrowser } from "@/components/RecordsBrowser";
 import { RECORDS_PAGE_SIZE } from "@/lib/recordsPaging";
 import type { ReadingRecord } from "@/lib/types";
@@ -27,13 +27,10 @@ export default async function RecordsPage() {
 
   return (
     <div className="app-shell">
+      <BackLink href="/home" />
       <h1 className="mb-6 text-center text-2xl font-bold">내가 기록한 책</h1>
 
       <RecordsBrowser childId={child.id} initialRecords={readingRecords} />
-
-      <Link href="/home" className="btn btn-ghost mt-auto mb-0">
-        뒤로
-      </Link>
     </div>
   );
 }

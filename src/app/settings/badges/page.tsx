@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { requireParentProfile } from "@/lib/currentProfile";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
+import { BackLink } from "@/components/BackLink";
 import { BadgeGrid } from "@/components/BadgeGrid";
 import { computeBadges } from "@/lib/badges";
 import { lastNMonths, countByMonth } from "@/lib/readingStats";
@@ -50,6 +50,7 @@ export default async function BadgesPage() {
 
   return (
     <div className="app-shell">
+      <BackLink href="/settings" />
       <h1 className="mb-6 text-center text-2xl font-bold">배지 비교</h1>
 
       {childProfiles.length === 0 ? (
@@ -73,10 +74,6 @@ export default async function BadgesPage() {
           );
         })
       )}
-
-      <Link href="/settings" className="btn btn-ghost mt-auto mb-0">
-        뒤로
-      </Link>
     </div>
   );
 }

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
+import { BackLink } from "@/components/BackLink";
 import { DokseoroStatusBadge } from "@/components/DokseoroStatusBadge";
 import type { ConversationMessage, ReadingRecord } from "@/lib/types";
 
@@ -106,6 +106,8 @@ export function RecordDetail({
 
   return (
     <div className="app-shell">
+      <BackLink href={backHref} />
+
       {childName && (
         <div className="mb-4 flex items-center gap-2">
           {childAvatar && <Avatar emoji={childAvatar} photoUrl={childAvatarPhotoUrl} size="sm" />}
@@ -204,10 +206,6 @@ export function RecordDetail({
           <p className="text-xs text-soft">등록 완료 표시는 부모님만 바꿀 수 있어요.</p>
         )}
       </div>
-
-      <Link href={backHref} className="btn btn-ghost mt-auto mb-0">
-        뒤로
-      </Link>
     </div>
   );
 }

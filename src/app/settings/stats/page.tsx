@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { requireParentProfile } from "@/lib/currentProfile";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
+import { BackLink } from "@/components/BackLink";
 import { lastNMonths, countByMonth } from "@/lib/readingStats";
 import { getAvatarPhotoUrls } from "@/lib/avatarPhoto";
 import type { Profile, ReadingRecord, RecordSourceType, DokseoroStatus } from "@/lib/types";
@@ -66,6 +66,7 @@ export default async function StatsPage() {
 
   return (
     <div className="app-shell">
+      <BackLink href="/settings" />
       <h1 className="mb-6 text-center text-2xl font-bold">독서 통계</h1>
 
       {childProfiles.length === 0 ? (
@@ -162,10 +163,6 @@ export default async function StatsPage() {
           )}
         </>
       )}
-
-      <Link href="/settings" className="btn btn-ghost mt-auto mb-0">
-        뒤로
-      </Link>
     </div>
   );
 }

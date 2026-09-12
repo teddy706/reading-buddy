@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { requireParentProfile } from "@/lib/currentProfile";
 import { createClient } from "@/lib/supabase/server";
+import { BackLink } from "@/components/BackLink";
 import { CoachSettingsForm } from "@/components/CoachSettingsForm";
 import { DEFAULT_STAGE_INSTRUCTIONS, STAGE_LABELS, type StageInstructions } from "@/lib/readingSession";
 
@@ -21,6 +21,7 @@ export default async function CoachSettingsPage() {
 
   return (
     <div className="app-shell">
+      <BackLink href="/settings" />
       <h1 className="mb-1 text-center text-2xl font-bold">AI 질문 스타일</h1>
       <p className="mb-4 text-center text-sm text-soft">
         아이와 대화할 때 AI가 각 단계에서 참고하는 지침이에요. 매번 같은 패턴이 지루하다면 자유롭게 바꿔보세요.
@@ -36,10 +37,6 @@ export default async function CoachSettingsPage() {
         isCustom={!!custom}
         stageLabels={STAGE_LABELS}
       />
-
-      <Link href="/settings" className="btn btn-ghost mt-auto mb-0">
-        뒤로
-      </Link>
     </div>
   );
 }

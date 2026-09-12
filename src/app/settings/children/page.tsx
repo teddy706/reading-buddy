@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireParentProfile } from "@/lib/currentProfile";
 import { createClient } from "@/lib/supabase/server";
+import { BackLink } from "@/components/BackLink";
 import { ChildEditCard } from "@/components/ChildEditCard";
 import { getAvatarPhotoUrls } from "@/lib/avatarPhoto";
 import type { Profile } from "@/lib/types";
@@ -27,6 +28,7 @@ export default async function SettingsChildrenPage() {
 
   return (
     <div className="app-shell">
+      <BackLink href="/settings" />
       <h1 className="mb-6 text-center text-2xl font-bold">자녀 프로필 관리</h1>
 
       {childProfiles.map((child) => (
@@ -39,10 +41,6 @@ export default async function SettingsChildrenPage() {
 
       <Link href="/profiles/new" className="btn btn-outline">
         + 프로필 추가
-      </Link>
-
-      <Link href="/settings" className="btn btn-ghost mt-auto mb-0">
-        뒤로
       </Link>
     </div>
   );

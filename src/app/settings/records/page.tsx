@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { requireParentProfile } from "@/lib/currentProfile";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
+import { BackLink } from "@/components/BackLink";
 import { RecordsBrowser } from "@/components/RecordsBrowser";
 import { RECORDS_PAGE_SIZE } from "@/lib/recordsPaging";
 import { getAvatarPhotoUrls } from "@/lib/avatarPhoto";
@@ -52,6 +52,7 @@ export default async function ParentRecordsPage() {
 
   return (
     <div className="app-shell">
+      <BackLink href="/settings" />
       <h1 className="mb-6 text-center text-2xl font-bold">자녀 독서 기록</h1>
 
       {childProfiles.length === 0 && (
@@ -72,10 +73,6 @@ export default async function ParentRecordsPage() {
           <RecordsBrowser childId={child.id} initialRecords={initialRecords} />
         </div>
       ))}
-
-      <Link href="/settings" className="btn btn-ghost mt-auto mb-0">
-        뒤로
-      </Link>
     </div>
   );
 }
