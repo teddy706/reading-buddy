@@ -28,12 +28,12 @@ export async function POST(_request: Request, { params }: { params: { id: string
   }
 
   try {
-    const essay = await generateEssay({
+    const result = await generateEssay({
       bookTitle: session.book_title,
       bookAuthor: session.book_author,
       history: messages,
     });
-    return NextResponse.json({ essay });
+    return NextResponse.json(result);
   } catch {
     return NextResponse.json({ error: "감상문을 만들지 못했어요. 다시 시도해주세요." }, { status: 502 });
   }

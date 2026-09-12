@@ -3,7 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TOTAL_QUESTIONS, STAGE_LABELS, stageForQuestionIndex } from "@/lib/readingSession";
+import { startPcmRecording, type PcmRecorder } from "@/lib/pcmRecorder";
 import type { ConversationMessage, ConversationSession } from "@/lib/types";
+
+const WAV_CONTENT_TYPE = "audio/wav; codecs=audio/pcm; samplerate=16000";
 
 export function ChatSession({ session }: { session: ConversationSession }) {
   const router = useRouter();
@@ -17,8 +20,8 @@ export function ChatSession({ session }: { session: ConversationSession }) {
   // 질문 생성이 어떤 정보를 참고했는지(또는 못 찾아서 제목만으로 질문 중인지) 아이에게 보여준다.
   const [bookContext, setBookContext] = useState<string | null | undefined>(undefined);
   const [showBookContext, setShowBookContext] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const pcmRecorderRef = useRef<PcmRecorder | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const answeredCount = messages.filter((m) => m.role === "child").length;
@@ -77,25 +80,24 @@ export function ChatSession({ session }: { session: ConversationSession }) {
     setError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      chunksRef.current = [];
-      recorder.ondataavailable = (e) => chunksRef.current.push(e.data);
-      recorder.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunksRef.current, { type: recorder.mimeType });
-        await transcribe(blob);
-      };
-      recorder.start();
-      mediaRecorderRef.current = recorder;
+      micStreamRef.current = stream;
+      pcmRecorderRef.current = startPcmRecording(stream);
       setRecording(true);
     } catch {
       setError("마이크를 사용할 수 없어요. 글자로 답해줘도 괜찮아요.");
     }
   }
 
-  function stopRecording() {
-    mediaRecorderRef.current?.stop();
+  async function stopRecording() {
+    const recorder = pcmRecorderRef.current;
+    const stream = micStreamRef.current;
+    pcmRecorderRef.current = null;
+    micStreamRef.current = null;
     setRecording(false);
+    if (!recorder) return;
+    const blob = recorder.stop();
+    stream?.getTracks().forEach((t) => t.stop());
+    await transcribe(blob);
   }
 
   async function transcribe(blob: Blob) {
@@ -103,7 +105,7 @@ export function ChatSession({ session }: { session: ConversationSession }) {
     try {
       const res = await fetch("/api/speech/transcribe", {
         method: "POST",
-        headers: { "Content-Type": blob.type || "audio/webm" },
+        headers: { "Content-Type": WAV_CONTENT_TYPE },
         body: blob,
       });
       const data = await res.json();

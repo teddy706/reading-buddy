@@ -102,7 +102,7 @@ export async function generateNextQuestion(params: {
 // history에서 어떤 답변이 몇 단계(1 장면 소환/2 역할 바꾸기/3 현실 적용) 질문에 대한 답인지
 // 묶어낸다. 옛 세션(이 기능 이전에 생성됨)처럼 assistant 메시지에 stage가 없으면 등장 순서로
 // 추정한다(STAGE_PLAN과 동일한 순서 규칙).
-function groupAnswersByStage(history: ConversationMessage[]): Record<ReadingCoachStage, string[]> {
+export function groupAnswersByStage(history: ConversationMessage[]): Record<ReadingCoachStage, string[]> {
   const groups: Record<ReadingCoachStage, string[]> = { 1: [], 2: [], 3: [] };
   let assistantIndex = 0;
   for (let i = 0; i < history.length; i++) {
@@ -118,6 +118,18 @@ function groupAnswersByStage(history: ConversationMessage[]): Record<ReadingCoac
   return groups;
 }
 
+export interface EssayResult {
+  essay: string;
+  // 감상문 문단이 어떤 원본 답변에서 나왔는지 — 검수 화면(ReviewSession)이 "내가 한 말"
+  // 비교로 보여준다(사용자 요청: AI 도움이 큰 만큼 아이가 최소 한 번은 읽고 등록하게 하고,
+  // 그 과정에서 문장 쓰는 법을 배우게 하고 싶다는 피드백, 2026-09-12).
+  stageAnswers: Record<ReadingCoachStage, string[]>;
+  // 문단(처음/가운데/끝)과 1:1로 대응하는 문장 쓰기 팁 3개. groupAnswersByStage/notes 모두
+  // "아이가 실제로 한 말"에서 출발하므로 PRD 8절의 창작 금지 원칙과 배치되지 않는다 — 팁은
+  // 사건/감정을 새로 짓는 게 아니라 표현을 어떻게 다듬었는지에 대한 설명이다.
+  notes: string[];
+}
+
 // 대화 로그만 근거로 감상문을 만든다. 아이가 말하지 않은 내용을 창작하지 않는다(PRD 8절 윤리 기준).
 // 단계별 독서록 유도 질문 프레임워크(사용자 설계)의 "독서록 조립 공식"에 따라 처음(줄거리)-
 // 가운데(공감·비판적 사고)-끝(현실 적용) 3단 구성으로 조립한다.
@@ -125,13 +137,13 @@ export async function generateEssay(params: {
   bookTitle: string;
   bookAuthor: string | null;
   history: ConversationMessage[];
-}): Promise<string> {
+}): Promise<EssayResult> {
   const { bookTitle, bookAuthor, history } = params;
   const byStage = groupAnswersByStage(history);
 
   const response = await getClient().chat.completions.create({
     model: process.env.AZURE_OPENAI_ESSAY_DEPLOYMENT!,
-    max_completion_tokens: 500,
+    max_completion_tokens: 700,
     messages: [
       {
         role: "system",
@@ -148,6 +160,7 @@ export async function generateEssay(params: {
           `   - 끝 문단(현실 연결): 3단계 답변 — ${byStage[3].join(" / ") || "(답변 없음)"}`,
           "5. 가운데 문단은 아이 답변을 바탕으로 '나라면 ~했을 것 같다'는 생각을 자연스러운 말투로 녹여내되, 매번 똑같은 문장 틀을 쓰지 말고 아이의 실제 답변에 맞게 표현을 바꾼다.",
           "6. 각 문단은 1~3문장으로 짧게 쓴다.",
+          "7. 문단마다(처음/가운데/끝 순서로 총 3개) '문장 쓰기 팁'을 하나씩 만들어 notes 배열에 담아라. 아이가 실제로 한 말과 감상문 문장을 비교해서, 어떻게 표현을 다듬었는지 친구처럼 짧게 한 문장으로 설명한다. 예: '너는 \"비늘 하나 나눠줬어\"라고 말했는데, 감상문에서는 \"비늘 하나를 나눠주면서 친구가 생겼다\"처럼 써봤어. 이렇게 쓰면 문장이 더 자연스러워져!' 새로운 내용을 지어내지 말고 실제 변화만 짚는다.",
         ].join("\n"),
       },
       ...toChatMessages(history),
@@ -158,13 +171,20 @@ export async function generateEssay(params: {
         type: "function",
         function: {
           name: "write_essay",
-          description: "대화 내용을 바탕으로 독서 감상문을 작성한다.",
+          description: "대화 내용을 바탕으로 독서 감상문과 문장 쓰기 팁을 작성한다.",
           parameters: {
             type: "object",
             properties: {
               essay: { type: "string", description: "처음-가운데-끝 3개 문단으로 구성된 한국어 독서 감상문" },
+              notes: {
+                type: "array",
+                items: { type: "string" },
+                minItems: 3,
+                maxItems: 3,
+                description: "3개 문단과 1:1로 대응하는 문장 쓰기 팁(문단 순서와 동일)",
+              },
             },
-            required: ["essay"],
+            required: ["essay", "notes"],
           },
         },
       },
@@ -176,9 +196,15 @@ export async function generateEssay(params: {
   if (!toolCall || toolCall.type !== "function") {
     throw new Error("감상문을 만들지 못했어요.");
   }
-  const input = JSON.parse(toolCall.function.arguments) as { essay?: string };
+  const input = JSON.parse(toolCall.function.arguments) as { essay?: string; notes?: unknown };
   if (!input.essay?.trim()) throw new Error("감상문을 만들지 못했어요.");
-  return input.essay.trim();
+
+  const notes = (Array.isArray(input.notes) ? input.notes : [])
+    .map((n) => (typeof n === "string" ? n.trim() : ""))
+    .slice(0, 3);
+  while (notes.length < 3) notes.push("");
+
+  return { essay: input.essay.trim(), stageAnswers: byStage, notes };
 }
 
 export interface ParsedOcrRecord {

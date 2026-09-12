@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { transcribeAudio } from "@/lib/azureSpeech";
 
 export async function POST(request: Request) {
-  const contentType = request.headers.get("content-type") || "audio/webm";
+  const contentType = request.headers.get("content-type") || "audio/wav; codecs=audio/pcm; samplerate=16000";
   const arrayBuffer = await request.arrayBuffer();
 
   if (arrayBuffer.byteLength === 0) {
