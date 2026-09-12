@@ -1,7 +1,7 @@
 # 아키텍처 문서 — 리딩버디 (Reading Buddy)
 
-**문서 버전:** v1.0
-**작성일:** 2026-09-12
+**문서 버전:** v1.1
+**작성일:** 2026-09-12 (최종 갱신: 2026-09-12)
 **성격:** **실제 구현(as-built) 기준** 기술 참조 문서. [PRD.md](PRD.md) 6장은 최초 설계 시점(Azure Static Web Apps/Functions, Playwright 자동화 전제)의 계획이며, 실제로는 상당 부분 다르게 구현됐다 — 이 문서가 현재 코드베이스와 어긋나면 **이 문서를 코드에 맞춰 갱신**할 것(PRD는 의사결정 배경 기록용으로 그대로 둠).
 
 ---
@@ -68,7 +68,7 @@ flowchart LR
 | DB/Auth/Storage | Supabase (`@supabase/supabase-js`, `@supabase/ssr`) | Postgres 15, RLS 활성화 |
 | AI SDK | `openai` npm 패키지 | Azure OpenAI를 OpenAI 호환 엔드포인트로 호출(baseURL을 Azure로 지정) |
 | 비밀번호 해시 | `bcryptjs` | 자녀 synthetic 계정 비밀번호, PIN 해시 |
-| 테스트 | Vitest 2.1.9 | 순수 함수 단위 테스트 31개 (`npm run test`) |
+| 테스트 | Vitest 2.1.9 | 순수 함수 단위 테스트 50개 (`npm run test`, §9 참고) |
 | 배포 | Vercel (Hobby) | `vercel.json`에 `regions: ["icn1"]` 고정 |
 | 코드 품질 | ESLint(`eslint-config-next`) | |
 
@@ -86,6 +86,7 @@ src/
     azureOpenAI.ts              # generateNextQuestion / generateEssay / parseOcrRecord /
                                  # guessCoverTitle / guessCorrectedBookTitle
     azureSpeech.ts               # STT (REST 단문 인식)
+    pcmRecorder.ts               # 브라우저 마이크 녹음 → 16kHz mono WAV(PCM) 인코딩
     documentIntelligence.ts     # OCR (analyze → Operation-Location 폴링, analyzeImageBytes)
     readingSession.ts           # 단계별 질문 프레임워크 상수/헬퍼 (STAGE_PLAN 등)
     coachPresets.ts             # AI 질문 코치 프리셋 3종
@@ -162,7 +163,7 @@ test/stubs/server-only.ts       # vitest에서 server-only 모듈 우회용 스�
 |---|---|---|
 | `families` | `id`, `name`, `join_code`(unique), `custom_stage_instructions`(jsonb, nullable) | 자녀 로그인 시 "어느 가족인지" 특정하는 데 `join_code` 사용. AI 질문 코치 커스터마이즈 값 보관(`0009`) |
 | `profiles` | `id`, `family_id`, `user_id`(→auth.users, unique), `role`(parent/child), `name`, `avatar`(기본 이모지), `avatar_photo_path`(nullable, `0007`), `pin_hash`, `pin_fail_count`, `pin_locked_until`(`0005`) | 부모/자녀 모두 실제 `auth.users` row를 가짐 |
-| `conversation_sessions` | `id`, `family_id`, `child_profile_id`, `book_title`, `book_author`, `messages`(jsonb — role/content/created_at/**stage**), `status`(in_progress/completed) | `stage` 필드로 각 질문이 몇 단계인지 기록(마이그레이션 없이 jsonb 확장) |
+| `conversation_sessions` | `id`, `family_id`, `child_profile_id`, `book_title`, `book_author`, `messages`(jsonb — role/content/created_at/**stage**/**isFollowUp**), `status`(in_progress/completed) | `stage` 필드로 각 질문이 몇 단계인지, `isFollowUp`으로 팔로업 질문인지 기록(둘 다 마이그레이션 없이 jsonb 확장) |
 | `reading_records` | `id`, `family_id`, `child_profile_id`, `book_title`, `book_author`, `source_type`(conversation/ocr/manual), `content`, `source_ref_id`(다형 참조, **FK 제약 없음**), `recorded_at`, `dokseoro_status`(pending/synced/failed), `updated_at`(트리거 자동 갱신) | 최종 독서 기록 |
 | `ocr_uploads` | `id`, `family_id`, `child_profile_id`, `image_path`(Storage 경로), `raw_text`, `parsed_result`(jsonb), `status`(pending/processed/failed) | |
 | ~~`dokseoro_credentials`~~ | — | **2026-09-12 `0008`로 제거됨.** '독서로' 자동 연동을 자격증명 저장 없는 수동 가이드 버전으로 확정하면서 죽은 스키마가 되어 삭제(트리거·RLS 정책도 테이블과 함께 제거) |
@@ -214,16 +215,22 @@ sequenceDiagram
         A->>DB: messages 배열에 질문 append(stage 기록)
         A-->>C: 질문 + bookContext(있으면)
     end
-    C->>A: POST finish (그만할래/4문항 완료)
+    C->>A: POST finish (다음에 작성/취소/4문항 완료)
     A->>AOAI: generateEssay(단계별 답변 groupAnswersByStage)
-    AOAI-->>A: 3단 구성 감상문
+    AOAI-->>A: 3단 구성 감상문 + stageAnswers + notes(문장 쓰기 팁)
+    A-->>C: 검수 화면 — "내가 한 말" 비교 + 쓰기 팁, 확인 후 편집/저장
     A->>DB: reading_records insert(source_type=conversation, dokseoro_status=pending)
     A->>DB: conversation_sessions update(status=completed)
 ```
 
 - 질문 생성은 저지연 경량 모델(`AZURE_OPENAI_QUESTION_DEPLOYMENT`, 실제 `gpt-5.4-mini`), 감상문 생성은 상위 품질 모델(`AZURE_OPENAI_ESSAY_DEPLOYMENT`, 실제 `gpt-4o`) — 둘 다 `max_completion_tokens` 파라미터 사용(`max_tokens`는 신형 모델에서 400 에러).
 - `generateNextQuestion`은 **어떤 실패 경로든 항상 `Promise<string>`을 반환**하도록 정리돼 있다 — API 예외든, 응답은 왔지만 질문이 빈 문자열이든, 전부 `readingSession.ts`의 stage 기반 고정 질문으로 수렴한다(2026-09-12 정리, 이전에는 null 반환 시 범용 문구로 대체되는 별도 경로가 있었음).
-- 부모가 `/settings/coach`에서 설정한 `custom_stage_instructions`(또는 `coachPresets.ts`의 프리셋)가 있으면 그 문구를, 없으면 `DEFAULT_STAGE_INSTRUCTIONS`를 사용(`resolveStageInstruction`).
+- 부모가 `/settings/coach`에서 설정한 `custom_stage_instructions`(또는 `coachPresets.ts`의 프리셋 3종을 불러와 저장한 값)가 있으면 그 문구를, 없으면 `DEFAULT_STAGE_INSTRUCTIONS`를 사용(`resolveStageInstruction`).
+- **질문 그라운딩**: 시스템 프롬프트가 "줄거리 요약에 나온 구체적 사건/인물 이름을 최소 하나는 넣어라"를 명시적으로 강제한다(2026-09-12 이전에는 단계 지침이 완성된 질문 문장을 거의 정해줘서 AI가 `bookContext`를 참고할 유인이 없었음). `bookContext`가 줄거리가 아니라 "OO주년 기념 개정판" 같은 출판 마케팅 문구뿐인 경우(카카오 API에서 실제로 관측됨)는 그 문구를 무시하고 모델이 원래 아는 지식으로 대체하도록 허용한다.
+- **팔로업 질문**: `readingSession.ts`의 `isAnswerTooShort()`가 짧거나(3자 이하) 흔한 회피성 답변("몰라" 등)을 AI 호출 없이 즉시 판정하면, `next-question` 라우트가 같은 stage에서 한 번 더(단계당 최대 `MAX_FOLLOW_UPS_PER_STAGE=1`회) 캐묻는 질문을 끼워 넣는다. 팔로업 질문은 `ConversationMessage.isFollowUp=true`로 표시되고 "계획된 질문" 진행 카운트에서 제외되지만(응답의 `progress.current`가 늘지 않음), `generateEssay`의 `groupAnswersByStage`가 답변을 모을 때는 정규 답변과 함께 포함된다.
+- **음성 입력**: 브라우저 `MediaRecorder`의 기본 포맷(webm/opus)을 Azure STT 단문 인식 REST API가 지원하지 않아서, Web Audio API로 raw PCM을 캡처해 16kHz mono WAV로 직접 인코딩하는 `src/lib/pcmRecorder.ts`를 사용한다.
+- **대화 중단**: "다음에 작성"은 세션을 `in_progress`로 그대로 두고 홈으로 이동(나중에 "이어서 쓰기"로 재진입). "취소"는 `DELETE /api/reading-sessions/[id]`(admin 클라이언트)로 세션 자체를 삭제한다 — `conversation_sessions`에는 RLS delete 정책이 없어 런타임에서 직접 지울 수 없기 때문에, 라우트가 소유권(본인+`in_progress`)을 먼저 확인한 뒤 서비스 역할로 삭제한다.
+- **감상문 검수**: `generateEssay`가 `essay` 외에 `stageAnswers`(단계별 원본 답변)와 `notes`(문단별 문장 쓰기 팁 3개)를 함께 반환한다. `ReviewSession`은 저장 전에 먼저 "내가 한 말 vs 감상문 문단" 비교 화면을 보여주고 "다 읽었어요, 확인했어요"를 눌러야 편집/저장 화면으로 넘어간다. 쓰기 팁은 아이의 실제 답변과 감상문 문장의 표현 차이만 짚도록 프롬프트에 명시해 PRD 8절의 창작 금지 원칙을 지킨다.
 
 ### 6.2 독서노트 OCR 입력
 
@@ -261,7 +268,16 @@ flowchart TD
 
 완전 자동화(크롤링/Playwright) 대신, 기록 상세 화면에서 (1) 클립보드 복사 (2) `read365.edunet.net` 새 탭 열기 (3) 완료 체크 토글(`dokseoro_status` pending↔synced)을 제공한다. 토글은 **부모만** 조작 가능(§4.4의 API 레벨 역할 검사).
 
-### 6.6 통계/배지 계산
+### 6.6 기록 목록 무한 스크롤 + 검색
+
+- `RecordsBrowser`(클라이언트 컴포넌트)가 자녀 화면(`/records`)과 부모 대시보드(`/settings/records`) 양쪽에서 공용으로 쓰인다 — RLS(`reading_records_select`)가 "본인 것만" vs "가족 전체"를 이미 갈라주므로 컴포넌트 자체는 role을 구분하지 않는다.
+- 서버 컴포넌트가 첫 페이지(`RECORDS_PAGE_SIZE=15`, `src/lib/recordsPaging.ts`)만 미리 조회해서 초기 렌더를 빠르게 하고, 이후 페이지는 `IntersectionObserver`로 감지한 스크롤에 따라 브라우저가 Supabase(anon key + RLS)를 직접 호출해 이어붙인다. 검색어(제목/내용, `ilike`, 디바운스)·날짜 범위 필터가 바뀌면 처음부터 재조회한다.
+- 총 권수(`· N권`)는 `.range()` 없는 head-count 쿼리로 구해서 전체 행을 받아오지 않는다.
+- 요청이 순서와 다르게 도착해도 최신 요청만 반영하는 가드(`requestIdRef`, 책 제목 자동완성의 `latestQueryRef`와 동일한 패턴)로 경쟁 상태를 막는다.
+- 부모 대시보드는 자녀별로 `ChildRecordsTabs`가 별도의 `RecordsBrowser` 인스턴스를 `key`로 강제 리마운트하며 렌더링한다 — 자녀 수가 늘어도(4명까지 테스트) 한 화면이 세로로 길어지지 않게 하고, 탭 전환 시 이전 아이의 검색/스크롤 상태가 남지 않게 한다.
+- `toIlikePattern()`이 `ilike` 검색어의 `%`/`_` 와일드카드와 `.or()` 필터 문법의 구분자(콤마·큰따옴표)를 이스케이프한다(유닛 테스트로 커버).
+
+### 6.7 통계/배지 계산
 
 - 별도 집계 테이블 없이 **매 요청마다 `reading_records`에서 즉석 계산**한다(`readingStats.ts`, `badges.ts`) — 스키마 변경 없이 구현하기 위한 선택.
 - 자녀 세션은 RLS상 형제자매의 `reading_records`를 볼 수 없다(의도된 프라이버시 경계). "이달의 다독왕" 배지 계산에 한해서만 `siblingReadingCounts.ts`가 **서비스 역할로 `child_profile_id`/`recorded_at`(집계용 두 컬럼만)**을 좁게 조회한다 — 책 제목·내용은 절대 조회하지 않음.
@@ -287,7 +303,7 @@ flowchart TD
 ### 8.1 배포
 
 - Vercel, `main` 브랜치 push마다 자동 재배포(GitHub 연동 기본 동작).
-- 환경변수는 `.env.local`과 동일한 15개 키를 Vercel Environment Variables(Production/Preview)에 등록.
+- 환경변수는 `.env.local`과 동일한 17개 키를 Vercel Environment Variables(Production/Preview)에 등록.
 - 프로덕션: **https://reading-buddy-ten.vercel.app**
 
 ### 8.2 리전 정합성
@@ -306,13 +322,21 @@ Supabase 프로젝트가 서울(ap-northeast-2)인데 Vercel 서버 함수 기�
 
 `router.push(...); router.refresh();`(로그인/PIN/로그아웃 직후 여러 곳)은 성능상 불필요해 보일 수 있으나, 형제자매가 같은 URL을 서로 다른 세션으로 방문할 때 **Next.js Router Cache가 이전 아이의 캐시된 화면을 보여줄 위험**을 막는 방어 코드로 판단해 그대로 뒀다. 제거 시 "동생 로그인했는데 형 데이터가 잠깐 보이는" 버그가 재발할 수 있다.
 
+### 8.6 Next.js의 fetch 캐싱은 "동적 렌더링"과 별개 축이다 (실제로 겪은 함정)
+
+`cookies()`를 읽어 동적 렌더링되는 서버 컴포넌트 페이지여도, 그 안에서 실행되는 개별 `fetch()` 호출은 **기본값(`force-cache`)을 그대로 따른다** — Supabase 서버 클라이언트(`@supabase/ssr`)의 PostgREST 호출도 내부적으로 `fetch`를 쓰므로 이 규칙에서 예외가 아니다. `src/lib/supabase/server.ts`가 커스텀 fetch/cache 옵션을 지정하지 않고 있어서, `/records`에서 실제로 기록이 있는데도 "아직 기록한 책이 없어요"가 뜨는(캐시된 빈 결과가 재사용된) 버그가 실제로 발생했다. **Supabase로 사용자별 데이터를 조회하는 모든 페이지에 `export const dynamic = "force-dynamic"`을 명시적으로 선언해야 한다** — 새 페이지를 추가할 때 빠뜨리기 쉬운 지점이라 체크리스트에 넣을 것.
+
+### 8.7 "use client" 모듈의 export를 서버 컴포넌트가 import하면 안 된다 (실제로 겪은 함정)
+
+Next.js는 `"use client"`가 선언된 모듈을 서버 컴포넌트가 import하면, 컴포넌트뿐 아니라 그 모듈이 export하는 **일반 상수/함수까지** 실제 값 대신 클라이언트 레퍼런스 프록시 객체로 치환한다. `RECORDS_PAGE_SIZE` 상수가 `RecordsBrowser.tsx`(`"use client"`)에서 export되고 있었는데, 이를 import해 `.range(0, RECORDS_PAGE_SIZE - 1)`에 쓰던 서버 컴포넌트(`records/page.tsx` 등)에서는 이 값이 `NaN`이 되어 PostgREST가 항상 빈 배열을 반환했다 — §8.6과 증상(빈 목록)이 같아서 원인 파악에 혼선이 있었다. **서버/클라이언트 양쪽에서 쓰는 상수·순수 함수는 `"use client"`가 없는 별도 모듈(`src/lib/recordsPaging.ts` 같은)로 분리할 것.**
+
 ---
 
 ## 9. 테스트 전략
 
 - **범위**: 외부 의존성(Supabase/Azure API 호출) 없이 **입력→출력만 있는 순수 함수**만 Vitest로 단위 테스트한다. 서버 컴포넌트·API 라우트·RLS 같은 통합 동작은 Supabase/Azure를 모킹하는 큰 작업이 필요해 현재 범위 밖.
 - **대상 모듈**: `readingSession.ts`(단계별 질문 매핑/폴백), `badges.ts`(배지 계산, 형제자매 비교 경계값), `readingStats.ts`(월별 집계), `childAuth.ts`(PIN 검증/잠금 판정, PIN→비밀번호 파생의 결정론성, bcrypt 해시), `bookSearch.ts`(중복 제거), `libraryBook.ts`(저자 필드 정리), `coachPresets.ts`.
-- **총 31개 테스트**, `npm run test` (watch는 `npm run test:watch`).
+- **총 50개 테스트(8개 파일)**, `npm run test` (watch는 `npm run test:watch`) — `coachPresets.ts`(프리셋 뼈대 유지 검증), `bookSearch.ts`(다중 소스 중복 제거), `libraryBook.ts`(저자 필드 정리), `RecordsBrowser.tsx`의 `toIlikePattern`(ilike 검색어 이스케이프)이 최초 31개 이후 추가됨.
 - **알아둘 점**:
   - `server-only`로 막힌 모듈을 일반 Node 런타임(vitest)에서 그대로 import하면 무조건 예외가 난다(react-server 조건이 있을 때만 빈 모듈로 치환되는 구조) — `vitest.config.mts`에서 `server-only`를 `test/stubs/server-only.ts`(빈 모듈)로 alias해서 우회.
   - vitest 5.x는 peer로 `@types/node@^22`를 요구해 프로젝트의 `@types/node@^20`과 충돌 — 프로젝트 전체 업그레이드 대신 `vitest@^2.1.9`로 고정.

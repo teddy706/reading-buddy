@@ -29,11 +29,13 @@ npm run test         # 한 번 실행
 npm run test:watch   # watch 모드
 ```
 
-`src/lib/*.test.ts`(Vitest)만 있다 — 외부 의존성(Supabase/Azure/카카오) 없이 순수하게 계산만 하는
-로직(PIN 검증/잠금, 단계별 질문 폴백, 배지 계산, 통계 집계)만 유닛 테스트로 다루고, Next.js
-서버 컴포넌트/API 라우트/RLS 같은 통합 동작은 지금까지처럼 실제 브라우저로 수동 검증한다(각
-Phase 항목의 CLAUDE.md 기록 참고). `server-only`로 막힌 모듈을 테스트에서 import할 수 있도록
-`vitest.config.mts`가 그 패키지를 빈 모듈(`test/stubs/server-only.ts`)로 치환해둔다.
+외부 의존성(Supabase/Azure/카카오 등) 없이 순수하게 계산만 하는 로직(PIN 검증/잠금, 단계별
+질문 폴백, 배지 계산, 통계 집계, 도서 검색 결과 중복 제거, 기록 검색어 이스케이프 등)만
+유닛 테스트(`src/lib/*.test.ts`, `src/components/*.test.ts`)로 다루고, Next.js 서버 컴포넌트/
+API 라우트/RLS 같은 통합 동작은 지금까지처럼 실제 브라우저로 수동 검증한다(각 Phase 항목의
+CLAUDE.md 기록 참고). 현재 8개 파일 50개 테스트. `server-only`로 막힌 모듈을 테스트에서
+import할 수 있도록 `vitest.config.mts`가 그 패키지를 빈 모듈(`test/stubs/server-only.ts`)로
+치환해둔다.
 
 ### Supabase 셋업
 
@@ -92,7 +94,7 @@ Vercel에 배포 중이라면 위에서 등록한 키들을 Vercel 프로젝트�
 **프로덕션**: https://reading-buddy-ten.vercel.app (Vercel 프로젝트 `teddy706s-projects/reading-buddy`)
 
 1. [vercel.com/new](https://vercel.com/new) → GitHub의 `reading-buddy` 저장소 Import (Next.js 자동 인식, 별도 설정 불필요)
-2. "Environment Variables" 섹션에서 `.env.local`의 모든 변수(`ALADIN_API_KEY` 제외 — 미사용)를 "paste the .env contents"로 한 번에 붙여넣기. Environments는 기본값(Production and Preview) 유지
+2. "Environment Variables" 섹션에서 `.env.local`의 모든 변수(17개, `ALADIN_API_KEY` 제외 — 미사용)를 "paste the .env contents"로 한 번에 붙여넣기. Environments는 기본값(Production and Preview) 유지
 3. Deploy. 이후 `main` 브랜치에 push할 때마다 Vercel이 자동으로 재배포함(별도 CI 설정 불필요)
 4. 로컬 코드에 localhost 하드코딩이 없어(미들웨어/쿠키는 요청 host 기준으로 동작) 배포 시 추가 코드 수정 불필요했음
 
@@ -119,23 +121,31 @@ src/
     azureSpeech.ts       음성 답변 STT
     documentIntelligence.ts  OCR (독서노트 사진, 표지 사진 둘 다)
     kakaoBook.ts         책 검색(줄거리 컨텍스트 + 표지 인식 후보 목록)
-    readingSession.ts    대화 질문 개수/단계별 프레임워크 규칙
+    readingSession.ts    대화 질문 개수/단계별 프레임워크 규칙 + 팔로업 질문 판정
+    coachPresets.ts       AI 질문 코치 프리셋(질문 스타일) 3종
     readingStats.ts      독서 통계 집계 헬퍼
     badges.ts            배지 카탈로그/판정 로직
     siblingReadingCounts.ts  형제자매 비교용 집계 전용 조회(서비스 역할)
     avatarPhoto.ts        아바타 사진 경로 규칙 + 서명된 URL 발급
+    bookSearch.ts / libraryBook.ts  도서 검색 다중 소스 조회 + 중복 제거
+    recordsPaging.ts      기록 목록 페이지 크기(서버/클라이언트 공용 모듈 — "use client" 금지)
     types.ts             테이블 타입
 supabase/
   migrations/           SQL 마이그레이션 (번호 순서대로 적용)
 docs/
   PRD.md                제품 요구사항 문서 (구현 중 결정된 사항은 "구현 노트"로 본문에 주석 처리)
+  ARCHITECTURE.md       실제 구현 기준 기술 아키텍처 (PRD 6장의 최초 계획과 다른 부분 정리)
+  BRIEF.md              프로젝트 5분 요약
+  STORIES.md            기능 단위 사용자 스토리 (전부 구현 완료 상태)
 ```
 
 ## 다음 단계
 
-Phase 1의 5개 항목이 모두 구현·테스트 완료됐다: "1. 계정/인증", "2. 대화 기반 독서 기록"(책 정보 입력 → 카카오 도서 검색으로 줄거리 조회 → AI 질문 생성 → 텍스트/음성 답변 → 감상문 생성 → 저장, `/read/**`), "3. 독서노트 OCR 입력"(사진 촬영/선택 → Document Intelligence OCR → AI가 책 제목/내용으로 구조화 → 전부 수정 가능한 확인 화면 → 저장, `/read/ocr/**`), "5. 기록 관리"(자녀 기록 히스토리/상세 수정 `/records/**`, 부모 대시보드 `/settings/records`), "4. '독서로' 자동 연동"(수동 등록 가이드 버전 — 아래 참고). Supabase/Azure 인프라와 카카오 도서 API도 모두 실제로 연결 확인까지 마쳤다. 음성 입력은 자동화 브라우저로는 마이크 테스트가 불가능해서 실제 기기 확인이 아직 안 됐다.
+Phase 1의 5개 항목과 Phase 2(A~D)가 모두 구현·테스트 완료됐다: "1. 계정/인증", "2. 대화 기반 독서 기록"(책 정보 입력/자동완성 → 카카오+도서관정보나루 도서 검색으로 줄거리 조회 → 단계별 AI 질문 생성(그라운딩/팔로업 질문 포함) → 텍스트/음성 답변 → 감상문 생성 → 검수(원본 답변 비교, 쓰기 팁) → 저장, `/read/**`), "3. 독서노트 OCR 입력"(`/read/ocr/**`), "5. 기록 관리"(무한 스크롤/검색/날짜 필터, 자녀별 탭, `/records/**`·`/settings/records`), "4. '독서로' 자동 연동"(수동 등록 가이드 버전 — 아래 참고), Vercel 배포, 독서 통계, 표지 촬영 인식, 형제자매 배지. Supabase/Azure 인프라와 도서 검색 API도 모두 실제로 연결 확인까지 마쳤다. 음성 입력은 초기엔 녹음 포맷 문제로 항상 실패했으나 PCM WAV 인코딩으로 교체해 해결됨(상세는 CLAUDE.md 참고).
 
-**"4. '독서로' 자동 연동"은 수동 등록 가이드로 구현했다.** 부모의 실제 '독서로' 로그인이 에듀넷 자체 계정임은 확인했지만, 이용약관상 자동화(크롤링) 허용 여부가 불명확해 Playwright 기반 완전 자동화 대신 수동 가이드를 채택했다(사용자 선택). `/records/[id]`·`/settings/records`의 기록 상세 화면에서 책 제목/날짜/내용을 한 번에 복사하는 버튼, '독서로' 사이트를 새 탭으로 여는 링크, 등록 완료 여부를 사람이 직접 표시하는 토글(`reading_records.dokseoro_status`)을 제공한다. 완전 자동화는 이용약관 확인 후 필요하면 재검토한다.
+**"4. '독서로' 자동 연동"은 수동 등록 가이드로 구현했다.** 부모의 실제 '독서로' 로그인이 에듀넷 자체 계정임은 확인했지만, 이용약관상 자동화(크롤링) 허용 여부가 불명확해 Playwright 기반 완전 자동화 대신 수동 가이드를 채택했다(사용자 선택). `/records/[id]`·`/settings/records`의 기록 상세 화면에서 책 제목/날짜/내용을 한 번에 복사하는 버튼, '독서로' 사이트를 새 탭으로 여는 링크, 등록 완료 여부를 사람이 직접 표시하는 토글(`reading_records.dokseoro_status`, 부모 전용)을 제공한다. 완전 자동화는 이용약관 확인 후 필요하면 재검토한다.
+
+**Phase 1/2 완료 이후로도 사용자 피드백 기반 개선이 계속 이어지고 있다** — 책 제목 자동완성, AI 질문 코치 프리셋(`/settings/coach`), 기록 목록 무한 스크롤/검색, 대화 "그만할래"를 취소/다음에 작성으로 분리, 화면별 UI 다듬기, AI 질문이 책 내용과 무관해지는 문제 수정(그라운딩 강화) 및 성의 없는 답변에 대한 팔로업 질문 등. 상세 이력은 [CLAUDE.md](CLAUDE.md)와 [docs/STORIES.md](docs/STORIES.md)를 참고.
 
 **"2. 대화 기반 독서 기록"은 이후 사용자가 설계한 "단계별 독서록 유도 질문 프레임워크"로 고도화했다.** 4개 질문을 1단계 "장면 소환"(줄거리 확인, 2문항) → 2단계 "역할 바꾸기"(공감) → 3단계 "현실 적용"(자기화)으로 고정하고, 감상문은 이 답변들을 처음(줄거리)-가운데(생각)-끝(현실 연결) 3단 구성으로 조립한다. 상세는 [CLAUDE.md](CLAUDE.md)의 2번 항목 참고.
 
