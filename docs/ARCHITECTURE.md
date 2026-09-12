@@ -277,6 +277,7 @@ flowchart TD
 - 요청이 순서와 다르게 도착해도 최신 요청만 반영하는 가드(`requestIdRef`, 책 제목 자동완성의 `latestQueryRef`와 동일한 패턴)로 경쟁 상태를 막는다.
 - 부모 대시보드는 자녀별로 `ChildRecordsTabs`가 별도의 `RecordsBrowser` 인스턴스를 `key`로 강제 리마운트하며 렌더링한다 — 자녀 수가 늘어도(4명까지 테스트) 한 화면이 세로로 길어지지 않게 하고, 탭 전환 시 이전 아이의 검색/스크롤 상태가 남지 않게 한다.
 - `toIlikePattern()`이 `ilike` 검색어의 `%`/`_` 와일드카드와 `.or()` 필터 문법의 구분자(콤마·큰따옴표)를 이스케이프한다(유닛 테스트로 커버).
+- **선택된 자녀 탭은 로컬 state가 아니라 URL 쿼리(`?child=<id>`)로 관리한다.** `/settings/records`는 서버 컴포넌트 페이지라, 기록 상세로 들어갔다가 `BackLink`(고정 `href`로 이동하는 일반 `Link`)로 돌아오면 페이지 자체가 새로 마운트돼 로컬 `useState`는 항상 초기값으로 리셋된다 — 기록 상세의 `backHref`가 그 기록의 `child_profile_id`를 쿼리로 실어 보내고, `ChildRecordsTabs`가 마운트 시 그 값을 초기 탭으로 읽는 방식으로 고쳤다(2026-09-12). `useSearchParams()`를 쓰는 클라이언트 컴포넌트는 `<Suspense>`로 감싸야 `next build`가 통과한다.
 
 ### 6.7 통계/배지 계산
 

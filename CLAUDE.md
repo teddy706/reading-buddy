@@ -200,6 +200,16 @@ PRD 4.2 "MVP 이후 로드맵" 후보 중 사용자가 명시적으로 아래 4�
 >
 > 이어서 사용자가 네이버쇼핑 책 카탈로그 페이지(`search.shopping.naver.com/book/catalog/...`)에는 쪽수가 잘 나온다며 활용법을 물었음 — 확인해보니 이건 판매용 카탈로그 데이터라 개발자 API로 공개돼 있지 않고, 실제로 이 세션에서 그 페이지를 서버 쪽에서 가져오려는 시도(WebFetch)가 차단당함. 네이버가 쇼핑몰 크롤링을 적극적으로 차단하고 있다는 최근 보도도 확인해서, **서버 자동 스크래핑 대신 사람이 새 탭에서 직접 열어보는 검색 링크만 제공**하기로 함(`src/lib/externalBookSearch.ts`의 `naverBookSearchUrl`) — '독서로' 자동 등록 대신 수동 가이드를 택한 것과 같은 판단 기준(이용약관/안정성 리스크 회피, "AI/자동화는 보조, 최종 확인은 사람"). 페이지 수를 입력하는 세 화면(`NewBookForm`, `OcrReview`, `RecordDetail`) 모두 입력란 옆에 "🔍 찾아보기" 링크를 추가해 책 제목(+저자)으로 네이버쇼핑 검색 결과를 새 탭으로 열어준다 — `RecordDetail`은 사용자가 요청한 "'독서로' 작성 시 필요하면 검색" 시나리오와 정확히 맞아떨어지는 위치(페이지 수 입력란 바로 아래에 '독서로' 등록 카드가 있음).
 
+## 부모 기록 화면: 자녀 탭 선택 상태가 "뒤로" 후 리셋되던 버그 수정 (2026-09-12)
+
+`/settings/records`(부모 대시보드)에서 두 번째 이상 자녀 탭(예: 황유니)을 고른 뒤 기록 하나를 열어보고 "뒤로"를 누르면, 방금 보던 자녀가 아니라 항상 첫 번째 자녀(고아린) 탭으로 되돌아가는 버그를 사용자가 발견함("아이를 선택하고 독서 기록을 본후 뒤로 나올때 그 선택된 상태로 유지되어야해").
+
+원인: `ChildRecordsTabs`의 선택된 탭(`activeId`)이 컴포넌트 로컬 `useState`였는데, `/settings/records`는 서버 컴포넌트 페이지라 `records/[id]`로 들어갔다가 "뒤로"(`BackLink`, 고정 `href`로 이동하는 일반 `Link` — 브라우저 히스토리 back이 아님)로 돌아오면 페이지 자체가 완전히 새로 마운트되면서 `useState`가 항상 초기값(`childrenData[0]`)으로 되돌아갔다.
+
+- 선택된 탭을 로컬 state 대신 **URL 쿼리 파라미터(`?child=<id>`)**로 관리하도록 바꿈 — 탭 클릭 시 `router.replace`로 URL을 갱신하고, 마운트 시 그 쿼리값을 초기 탭으로 읽는다.
+- `records/[id]/page.tsx`의 부모용 `backHref`가 `/settings/records`(고정) 대신 `/settings/records?child=${record.child_profile_id}`를 넘기도록 수정 — 기록의 주인이 누구인지는 이미 알고 있으니, 그 자녀 id를 그대로 쿼리에 실어 보내면 "뒤로" 갔을 때 자연스럽게 그 자녀 탭이 선택된다.
+- `useSearchParams()`를 쓰는 클라이언트 컴포넌트는 Next.js가 `<Suspense>`로 감싸도록 요구해서(안 그러면 `next build` 시 "missing-suspense-with-csr-bailout" 오류), `settings/records/page.tsx`에서 `<ChildRecordsTabs>`를 `<Suspense fallback={null}>`로 감쌈.
+
 ## 참고 문서
 
 - [docs/PRD.md](docs/PRD.md) — 전체 PRD (v1.8)

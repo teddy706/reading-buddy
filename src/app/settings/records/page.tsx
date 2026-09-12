@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireParentProfile } from "@/lib/currentProfile";
 import { createClient } from "@/lib/supabase/server";
 import { BackLink } from "@/components/BackLink";
@@ -64,7 +65,12 @@ export default async function ParentRecordsPage() {
       {childProfiles.length === 0 ? (
         <p className="mb-4 text-center text-sm text-soft">아직 자녀 프로필이 없어요.</p>
       ) : (
-        <ChildRecordsTabs childrenData={tabsData} />
+        // ChildRecordsTabs가 선택된 탭을 URL 쿼리(?child=)로 관리하느라 useSearchParams()를
+        // 쓰는데, Next.js는 이 훅을 쓰는 클라이언트 컴포넌트를 Suspense로 감싸도록 요구한다
+        // (안 감싸면 빌드 경고/실패, "missing-suspense-with-csr-bailout").
+        <Suspense fallback={null}>
+          <ChildRecordsTabs childrenData={tabsData} />
+        </Suspense>
       )}
     </div>
   );

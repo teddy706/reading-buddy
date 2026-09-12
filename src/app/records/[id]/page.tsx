@@ -37,7 +37,11 @@ export default async function RecordDetailPage({ params }: { params: { id: strin
       childAvatarPhotoUrl={childPhotoUrl}
       conversationMessages={(conversation?.messages as ConversationMessage[] | undefined) ?? null}
       canManageDokseoro={viewer.role === "parent"}
-      backHref={showChild ? "/settings/records" : "/records"}
+      // 부모 화면(/settings/records)은 자녀별 탭으로 나뉘어 있어서, 이 기록의 주인(child_profile_id)을
+      // 쿼리 파라미터로 넘겨야 "뒤로" 눌렀을 때 방금 보고 있던 자녀 탭으로 그대로 돌아간다
+      // (ChildRecordsTabs가 이 값을 읽어 초기 탭을 정한다) — 없으면 항상 첫 번째 자녀 탭으로
+      // 리셋되는 문제가 있었다(2026-09-12 사용자 피드백).
+      backHref={showChild ? `/settings/records?child=${record.child_profile_id}` : "/records"}
     />
   );
 }
