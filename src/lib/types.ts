@@ -32,6 +32,9 @@ export interface ReadingRecord {
   child_profile_id: string;
   book_title: string;
   book_author: string | null;
+  // 책의 총 페이지 수(0010_page_count.sql). 도서 검색 API가 제공하지 않아 사람이 직접
+  // 입력한다 — 기존 기록에는 값이 없을 수 있어 nullable, 기록 상세 화면에서 채워 넣을 수 있다.
+  page_count: number | null;
   source_type: RecordSourceType;
   content: string;
   source_ref_id: string | null;
@@ -67,6 +70,9 @@ export interface ConversationSession {
   child_profile_id: string;
   book_title: string;
   book_author: string | null;
+  // 대화 시작 화면(NewBookForm)에서 책 제목/저자와 함께 입력받는다. 감상문 저장 시
+  // reading_records.page_count로 그대로 복사된다(0010_page_count.sql).
+  book_page_count: number | null;
   messages: ConversationMessage[];
   status: ConversationStatus;
   created_at: string;

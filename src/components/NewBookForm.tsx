@@ -15,6 +15,10 @@ export function NewBookForm() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
+  // 총 페이지 수 — 카카오/도서관정보나루 검색 API 둘 다 페이지 수를 제공하지 않아서 자동으로
+  // 채울 수 없다. 책 표지/뒷면에 적힌 숫자를 아이/부모가 직접 입력한다(문자열로 들고 있다가
+  // 제출 시 정수로 변환·검증).
+  const [pageCount, setPageCount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [lookupLoading, setLookupLoading] = useState(false);
@@ -106,6 +110,19 @@ export function NewBookForm() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
+    const trimmedTitle = title.trim();
+    // 표지에 적힌 실제 제목과 다른 짧은 낱말(예: 장르명, 한 글자)을 실수로 넣는 걸 막기 위한
+    // 최소한의 검증 — 검색 자동완성에서 정확한 제목을 고르는 기존 경로는 그대로 두고, 직접
+    // 입력하는 경우에도 최소한의 형태는 갖추도록 한다.
+    if (trimmedTitle.length < 2) {
+      setError("책 표지에 적힌 정확한 제목을 입력해줘.");
+      return;
+    }
+    const parsedPageCount = Number(pageCount);
+    if (!pageCount.trim() || !Number.isInteger(parsedPageCount) || parsedPageCount <= 0) {
+      setError("책 뒷면이나 마지막 쪽에 적힌 페이지 수를 숫자로 입력해줘.");
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
@@ -123,8 +140,9 @@ export function NewBookForm() {
         .insert({
           family_id: profile.family_id,
           child_profile_id: profile.id,
-          book_title: title.trim(),
+          book_title: trimmedTitle,
           book_author: author.trim() || null,
+          book_page_count: parsedPageCount,
         })
         .select()
         .single();
@@ -191,7 +209,7 @@ export function NewBookForm() {
         <div className="relative">
           <input
             type="text"
-            placeholder="책 제목"
+            placeholder="책 제목 (표지에 적힌 그대로)"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onFocus={() => setShowTitleSuggestions(true)}
@@ -240,6 +258,17 @@ export function NewBookForm() {
           placeholder="지은이 (몰라도 괜찮아요)"
           value={author}
           onChange={(e) => setAuthor(e.target.value)}
+          className="input"
+        />
+        <label className="mb-1 text-sm font-semibold text-soft">책 페이지 수 (책 뒷면·마지막 쪽에 있어요)</label>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          placeholder="예: 132"
+          value={pageCount}
+          onChange={(e) => setPageCount(e.target.value)}
+          required
           className="input"
         />
         {error && <p className="mb-2 text-sm font-semibold text-red-500">{error}</p>}

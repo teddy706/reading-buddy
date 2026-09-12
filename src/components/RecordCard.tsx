@@ -17,6 +17,7 @@ export function RecordCard({ record }: { record: ReadingRecord }) {
       </div>
       <p className="mb-2 text-sm text-soft">
         {record.recorded_at} · {SOURCE_LABEL[record.source_type]}
+        {record.page_count != null && ` · ${record.page_count}쪽`}
       </p>
       <p className="line-clamp-2 text-sm">{record.content}</p>
     </Link>

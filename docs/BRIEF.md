@@ -93,7 +93,7 @@
 
 ## 10. 참고 문서
 
-- [PRD.md](PRD.md) — 전체 요구사항/의사결정 배경 (v1.7)
+- [PRD.md](PRD.md) — 전체 요구사항/의사결정 배경 (v1.8)
 - [STORIES.md](STORIES.md) — 기능 단위 사용자 스토리
 - [ARCHITECTURE.md](ARCHITECTURE.md) — 실제 구현 기준 기술 아키텍처
 - [../CLAUDE.md](../CLAUDE.md) — 구현·검증 진행 현황(살아있는 소스)

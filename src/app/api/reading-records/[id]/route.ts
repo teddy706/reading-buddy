@@ -16,10 +16,15 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (!profile) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
 
   const supabase = createClient();
-  const { bookTitle, content, recordedDate, dokseoroStatus } = await request.json();
+  const { bookTitle, content, recordedDate, dokseoroStatus, pageCount } = await request.json();
 
   if (dokseoroStatus !== undefined && profile.role !== "parent") {
     return NextResponse.json({ error: "'독서로' 등록 상태는 부모만 바꿀 수 있어요." }, { status: 403 });
+  }
+  // 페이지 수는 도서 검색 API가 제공하지 않아 항상 사람이 직접 입력한다 — 값을 보냈다면
+  // 양의 정수인지 서버에서도 다시 확인한다(빈 값/undefined면 그냥 건드리지 않고 넘어감).
+  if (pageCount !== undefined && (typeof pageCount !== "number" || !Number.isInteger(pageCount) || pageCount <= 0)) {
+    return NextResponse.json({ error: "페이지 수는 1 이상의 숫자여야 해요." }, { status: 400 });
   }
 
   const update: {
@@ -27,11 +32,13 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     content?: string;
     recorded_at?: string;
     dokseoro_status?: DokseoroStatus;
+    page_count?: number;
   } = {};
   if (typeof bookTitle === "string" && bookTitle.trim()) update.book_title = bookTitle.trim();
   if (typeof content === "string" && content.trim()) update.content = content.trim();
   if (typeof recordedDate === "string" && recordedDate) update.recorded_at = recordedDate;
   if (DOKSEORO_STATUSES.includes(dokseoroStatus)) update.dokseoro_status = dokseoroStatus;
+  if (typeof pageCount === "number") update.page_count = pageCount;
 
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: "변경할 내용이 없어요." }, { status: 400 });

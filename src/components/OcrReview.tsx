@@ -20,17 +20,29 @@ export function OcrReview({
   const [bookTitle, setBookTitle] = useState(initialBookTitle);
   const [content, setContent] = useState(initialContent);
   const [recordedDate, setRecordedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  // OCR/AI 구조화는 원문을 제목/내용으로만 나누고 페이지 수는 짓지 않는다(사실을 지어내지
+  // 않는다는 PRD 8절 원칙 — 숫자는 특히 잘못 지어내기 쉬워서 항상 사람이 직접 입력한다).
+  const [pageCount, setPageCount] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function onSave() {
+    if (!bookTitle.trim() || bookTitle.trim().length < 2) {
+      setError("책 표지에 적힌 정확한 제목을 입력해주세요.");
+      return;
+    }
+    const parsedPageCount = Number(pageCount);
+    if (!pageCount.trim() || !Number.isInteger(parsedPageCount) || parsedPageCount <= 0) {
+      setError("책 뒷면이나 마지막 쪽에 적힌 페이지 수를 숫자로 입력해주세요.");
+      return;
+    }
     setError(null);
     setSaving(true);
     try {
       const res = await fetch(`/api/ocr-uploads/${uploadId}/finish`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookTitle, content, recordedDate }),
+        body: JSON.stringify({ bookTitle, content, recordedDate, pageCount: parsedPageCount }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "저장하지 못했어요.");
@@ -59,7 +71,23 @@ export function OcrReview({
       )}
 
       <label className="mb-1 text-sm font-semibold text-soft">책 제목</label>
-      <input value={bookTitle} onChange={(e) => setBookTitle(e.target.value)} placeholder="책 제목" className="input" />
+      <input
+        value={bookTitle}
+        onChange={(e) => setBookTitle(e.target.value)}
+        placeholder="책 표지에 적힌 정확한 제목"
+        className="input"
+      />
+
+      <label className="mb-1 text-sm font-semibold text-soft">책 페이지 수 (책 뒷면·마지막 쪽에 있어요)</label>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={1}
+        placeholder="예: 132"
+        value={pageCount}
+        onChange={(e) => setPageCount(e.target.value)}
+        className="input"
+      />
 
       <label className="mb-1 text-sm font-semibold text-soft">읽은 날짜</label>
       <input

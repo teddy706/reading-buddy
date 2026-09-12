@@ -9,6 +9,7 @@ function record(overrides: Partial<ReadingRecord> = {}): ReadingRecord {
     child_profile_id: "child-1",
     book_title: "책",
     book_author: null,
+    page_count: null,
     source_type: "manual",
     content: "내용",
     source_ref_id: null,

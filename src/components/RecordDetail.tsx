@@ -36,6 +36,7 @@ export function RecordDetail({
 }) {
   const router = useRouter();
   const [bookTitle, setBookTitle] = useState(record.book_title);
+  const [pageCount, setPageCount] = useState(record.page_count != null ? String(record.page_count) : "");
   const [recordedDate, setRecordedDate] = useState(record.recorded_at);
   const [content, setContent] = useState(record.content);
   const [saving, setSaving] = useState(false);
@@ -48,7 +49,11 @@ export function RecordDetail({
 
   const childAnswerCount = (conversationMessages ?? []).filter((m) => m.role === "child").length;
 
-  const dirty = bookTitle !== record.book_title || recordedDate !== record.recorded_at || content !== record.content;
+  const dirty =
+    bookTitle !== record.book_title ||
+    pageCount !== (record.page_count != null ? String(record.page_count) : "") ||
+    recordedDate !== record.recorded_at ||
+    content !== record.content;
 
   async function patchRecord(body: Record<string, unknown>) {
     const res = await fetch(`/api/reading-records/${record.id}`, {
@@ -60,11 +65,24 @@ export function RecordDetail({
     if (!res.ok) throw new Error(data.error ?? "저장하지 못했어요.");
   }
 
+  // 페이지 수는 도서 검색 API가 제공하지 않아 항상 사람이 직접 입력한다 — 빈 문자열이면
+  // "아직 안 채움"으로 보고 그대로 두고(기존 기록을 억지로 채우게 강제하지 않음), 값이 있으면
+  // 양의 정수인지 확인한다.
+  function parsePageCountInput(): number | undefined {
+    if (!pageCount.trim()) return undefined;
+    const parsed = Number(pageCount);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      throw new Error("페이지 수는 1 이상의 숫자로 입력해주세요.");
+    }
+    return parsed;
+  }
+
   async function onSave() {
     setSaving(true);
     setError(null);
     try {
-      await patchRecord({ bookTitle, content, recordedDate });
+      const parsedPageCount = parsePageCountInput();
+      await patchRecord({ bookTitle, content, recordedDate, ...(parsedPageCount !== undefined ? { pageCount: parsedPageCount } : {}) });
       setSaved(true);
       router.refresh();
       setTimeout(() => setSaved(false), 1500);
@@ -81,7 +99,14 @@ export function RecordDetail({
     try {
       // 상태와 함께 현재 화면에 있는 최신 내용도 같이 저장해서, "등록 완료"로 표시한 시점의
       // 내용과 실제로 복사해 붙여넣은 내용이 어긋나지 않게 한다.
-      await patchRecord({ bookTitle, content, recordedDate, dokseoroStatus: next });
+      const parsedPageCount = parsePageCountInput();
+      await patchRecord({
+        bookTitle,
+        content,
+        recordedDate,
+        dokseoroStatus: next,
+        ...(parsedPageCount !== undefined ? { pageCount: parsedPageCount } : {}),
+      });
       setDokseoroStatus(next);
       router.refresh();
     } catch (err) {
@@ -92,7 +117,14 @@ export function RecordDetail({
   }
 
   async function onCopyAll() {
-    const text = [`책 제목: ${bookTitle}`, record.book_author ? `저자: ${record.book_author}` : null, `읽은 날짜: ${recordedDate}`, "", content]
+    const text = [
+      `책 제목: ${bookTitle}`,
+      record.book_author ? `저자: ${record.book_author}` : null,
+      pageCount.trim() ? `페이지 수: ${pageCount.trim()}쪽` : null,
+      `읽은 날짜: ${recordedDate}`,
+      "",
+      content,
+    ]
       .filter((line) => line !== null)
       .join("\n");
     try {
@@ -122,6 +154,17 @@ export function RecordDetail({
 
       <label className="mb-1 text-sm font-semibold text-soft">책 제목</label>
       <input value={bookTitle} onChange={(e) => setBookTitle(e.target.value)} className="input" />
+
+      <label className="mb-1 text-sm font-semibold text-soft">책 페이지 수</label>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={1}
+        placeholder="예: 132"
+        value={pageCount}
+        onChange={(e) => setPageCount(e.target.value)}
+        className="input"
+      />
 
       <label className="mb-1 text-sm font-semibold text-soft">읽은 날짜</label>
       <input type="date" value={recordedDate} onChange={(e) => setRecordedDate(e.target.value)} className="input" />

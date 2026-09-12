@@ -34,6 +34,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       child_profile_id: session.child_profile_id,
       book_title: session.book_title,
       book_author: session.book_author,
+      page_count: session.book_page_count,
       source_type: "conversation",
       content: essay.trim(),
       source_ref_id: session.id,

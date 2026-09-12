@@ -82,6 +82,9 @@ export function ReviewSession({ session }: { session: ConversationSession }) {
   return (
     <div className="app-shell">
       <h1 className="mb-1 text-center text-xl font-bold">{session.book_title}</h1>
+      {session.book_page_count != null && (
+        <p className="mb-1 text-center text-xs text-soft">총 {session.book_page_count}쪽</p>
+      )}
       <p className="mb-4 text-center text-sm text-soft">
         {!generating && data && !confirmedRead
           ? "내가 한 말이 어떻게 다듬어졌는지 읽어보자"

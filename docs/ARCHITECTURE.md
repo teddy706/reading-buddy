@@ -163,8 +163,8 @@ test/stubs/server-only.ts       # vitest에서 server-only 모듈 우회용 스�
 |---|---|---|
 | `families` | `id`, `name`, `join_code`(unique), `custom_stage_instructions`(jsonb, nullable) | 자녀 로그인 시 "어느 가족인지" 특정하는 데 `join_code` 사용. AI 질문 코치 커스터마이즈 값 보관(`0009`) |
 | `profiles` | `id`, `family_id`, `user_id`(→auth.users, unique), `role`(parent/child), `name`, `avatar`(기본 이모지), `avatar_photo_path`(nullable, `0007`), `pin_hash`, `pin_fail_count`, `pin_locked_until`(`0005`) | 부모/자녀 모두 실제 `auth.users` row를 가짐 |
-| `conversation_sessions` | `id`, `family_id`, `child_profile_id`, `book_title`, `book_author`, `messages`(jsonb — role/content/created_at/**stage**/**isFollowUp**), `status`(in_progress/completed) | `stage` 필드로 각 질문이 몇 단계인지, `isFollowUp`으로 팔로업 질문인지 기록(둘 다 마이그레이션 없이 jsonb 확장) |
-| `reading_records` | `id`, `family_id`, `child_profile_id`, `book_title`, `book_author`, `source_type`(conversation/ocr/manual), `content`, `source_ref_id`(다형 참조, **FK 제약 없음**), `recorded_at`, `dokseoro_status`(pending/synced/failed), `updated_at`(트리거 자동 갱신) | 최종 독서 기록 |
+| `conversation_sessions` | `id`, `family_id`, `child_profile_id`, `book_title`, `book_author`, `book_page_count`(nullable int, `0010`), `messages`(jsonb — role/content/created_at/**stage**/**isFollowUp**), `status`(in_progress/completed) | `stage` 필드로 각 질문이 몇 단계인지, `isFollowUp`으로 팔로업 질문인지 기록(둘 다 마이그레이션 없이 jsonb 확장). `book_page_count`는 대화 시작 화면에서 사람이 직접 입력(도서 검색 API가 페이지 수를 제공하지 않음) |
+| `reading_records` | `id`, `family_id`, `child_profile_id`, `book_title`, `book_author`, `page_count`(nullable int, `0010`), `source_type`(conversation/ocr/manual), `content`, `source_ref_id`(다형 참조, **FK 제약 없음**), `recorded_at`, `dokseoro_status`(pending/synced/failed), `updated_at`(트리거 자동 갱신) | 최종 독서 기록. `page_count`는 대화 완료 시 `conversation_sessions.book_page_count`를 복사하거나(대화 기록) OCR 검수 화면에서 직접 입력(OCR 기록) — AI가 숫자를 추측하지 않음 |
 | `ocr_uploads` | `id`, `family_id`, `child_profile_id`, `image_path`(Storage 경로), `raw_text`, `parsed_result`(jsonb), `status`(pending/processed/failed) | |
 | ~~`dokseoro_credentials`~~ | — | **2026-09-12 `0008`로 제거됨.** '독서로' 자동 연동을 자격증명 저장 없는 수동 가이드 버전으로 확정하면서 죽은 스키마가 되어 삭제(트리거·RLS 정책도 테이블과 함께 제거) |
 
@@ -188,6 +188,7 @@ test/stubs/server-only.ts       # vitest에서 server-only 모듈 우회용 스�
 | `0007_avatar_photo.sql` | `avatar_photo_path` 컬럼 + `avatars` 버킷/정책 |
 | `0008_drop_dokseoro_credentials.sql` | 죽은 스키마 제거 |
 | `0009_custom_stage_instructions.sql` | `families.custom_stage_instructions` |
+| `0010_page_count.sql` | `conversation_sessions.book_page_count`, `reading_records.page_count` — 책 페이지 수(사람이 직접 입력) |
 
 > 이 프로젝트의 마이그레이션은 `supabase db push`가 아니라 **Supabase 대시보드 SQL Editor에서 번호 순서대로 수동 실행**하는 방식으로 적용해왔다. 새 마이그레이션을 추가하면 실제 프로젝트에도 직접 실행해야 반영된다.
 

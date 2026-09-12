@@ -57,6 +57,7 @@ import할 수 있도록 `vitest.config.mts`가 그 패키지를 빈 모듈(`test
    - `0007_avatar_photo.sql` — 자녀 아바타 사진용 비공개 스토리지 버킷(`avatars`) + `profiles.avatar_photo_path` 컬럼
    - `0008_drop_dokseoro_credentials.sql` — 쓰이지 않는 `dokseoro_credentials` 테이블 제거('독서로' 연동은 수동 등록 가이드로 확정, 위 "'독서로' 연동" 참고)
    - `0009_custom_stage_instructions.sql` — 부모가 AI의 단계별 질문 지침을 가족 단위로 바꿀 수 있는 `families.custom_stage_instructions` 컬럼
+   - `0010_page_count.sql` — 책 페이지 수를 기록하는 `conversation_sessions.book_page_count`/`reading_records.page_count` 컬럼(도서 검색 API가 페이지 수를 제공하지 않아 사람이 직접 입력)
 4. `CHILD_AUTH_SECRET`은 `openssl rand -hex 32`로 생성
 
 ### Azure 셋업
