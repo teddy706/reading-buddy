@@ -59,7 +59,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   messages.push({
     role: "assistant",
-    content: question ?? "그 책에 대해 더 이야기해줄래?",
+    content: question,
     created_at: new Date().toISOString(),
     stage,
   });

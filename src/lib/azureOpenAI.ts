@@ -45,7 +45,10 @@ function toChatMessages(history: ConversationMessage[]) {
 
 // 아이의 직전 답변을 참고해 다음 질문을 만든다. 단계별 독서록 유도 질문 프레임워크에 따라
 // questionIndex가 아니라 stage(1 장면 소환/2 역할 바꾸기/3 현실 적용)로 질문의 성격을 분기한다.
-// 실패하면 호출한 쪽이 고정 폴백 질문을 쓸 수 있도록 null을 반환한다(PRD 9.5 폴백 원칙).
+// API 호출 자체가 실패하는 경우와 응답은 왔지만 tool call이 비어있는/잘못된 경우 둘 다
+// 똑같이 stage에 맞는 고정 폴백 질문으로 수렴한다(PRD 9.5 폴백 원칙) — 실패 경로마다 다른
+// 문구가 나가면 "단계별 프레임워크를 항상 유지한다"는 설계 의도가 깨지므로, 호출부가 별도
+// 폴백 문구를 준비할 필요 없이 이 함수가 절대 null을 반환하지 않도록 통일한다.
 export async function generateNextQuestion(params: {
   bookTitle: string;
   bookAuthor: string | null;
@@ -53,7 +56,7 @@ export async function generateNextQuestion(params: {
   history: ConversationMessage[];
   questionIndex: number;
   stage: ReadingCoachStage;
-}): Promise<string | null> {
+}): Promise<string> {
   const { bookTitle, bookAuthor, bookContext, history, questionIndex, stage } = params;
 
   try {
@@ -101,9 +104,9 @@ export async function generateNextQuestion(params: {
     });
 
     const toolCall = response.choices[0]?.message?.tool_calls?.[0];
-    if (!toolCall || toolCall.type !== "function") return null;
+    if (!toolCall || toolCall.type !== "function") return fallbackQuestion(questionIndex);
     const input = JSON.parse(toolCall.function.arguments) as { question?: string };
-    return input.question?.trim() || null;
+    return input.question?.trim() || fallbackQuestion(questionIndex);
   } catch {
     return fallbackQuestion(questionIndex);
   }
