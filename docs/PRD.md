@@ -239,12 +239,12 @@ AI 관련 기능은 보유한 **Azure 구독**을 활용하고, **데이터베�
 | **conversation_sessions** | `id`, `child_id (FK)`, `messages (jsonb)`, `status (in_progress/completed)`, `created_at` | 대화 기반 기록의 원본 대화 로그 |
 | **reading_records** | `id`, `child_id (FK)`, `book_title`, `book_author`, `source_type (conversation/ocr/manual)`, `content (text, 최종 감상문)`, `source_ref_id (FK, 대화 세션 또는 OCR 결과)`, `recorded_at`, `dokseoro_status (pending/synced/failed)`, `created_at`, `updated_at` | 최종 독서 기록. '독서로' 반영 상태 포함 |
 | **ocr_uploads** | `id`, `child_id (FK)`, `image_url (Supabase Storage)`, `raw_text`, `parsed_result (jsonb)`, `status`, `created_at` | 독서노트 사진 원본 및 OCR 결과 |
-| **dokseoro_credentials** | `id`, `parent_id (FK→auth.users)`, `encrypted_username`, `encrypted_password`, `created_at` | '독서로' 로그인 정보. 서버(service role)에서만 접근, 클라이언트 RLS로는 차단 |
+| ~~dokseoro_credentials~~ | `id`, `parent_id (FK→auth.users)`, `encrypted_username`, `encrypted_password`, `created_at` | '독서로' 로그인 정보로 설계했으나 자동 연동을 만들지 않기로 하면서 죽은 스키마가 됨 — **2026-09-12 제거됨**(9.7 구현 노트 참고) |
 
 ### 9.3 RLS 정책 방향 (초안)
 
 - `child_profiles`, `reading_records`, `conversation_sessions`, `ocr_uploads`: `parent_id = auth.uid()` (또는 `child_id`를 통한 조인 후 `parent_id = auth.uid()`) 조건으로 **부모 본인 소유 데이터만** 접근 가능
-- `dokseoro_credentials`: 클라이언트 role에는 RLS로 전체 차단, **Supabase Edge Function(service role)** 에서만 읽어 '독서로' 자동화 로직에 사용
+- ~~`dokseoro_credentials`: 클라이언트 role에는 RLS로 전체 차단, **Supabase Edge Function(service role)** 에서만 읽어 '독서로' 자동화 로직에 사용~~ (2026-09-12 테이블 자체가 제거됨, 9.7 구현 노트 참고)
 - 프로필 간 구분(쌍둥이 A/B)은 애플리케이션 레벨 필터(`WHERE child_id = :activeChildId`)로 처리 — 위 9.1의 전제 참고
 
 ### 9.4 프로필 선택 / PIN 전환 UX 와이어프레임
@@ -387,6 +387,8 @@ flowchart TD
 - ⚠️ **검토 중 발견된 확인 필요 사항**: 9.2절의 `dokseoro_credentials` 테이블은 에듀넷 아이디/비밀번호(`encrypted_username`/`encrypted_password`) 저장을 전제로 설계했으나, 독서로는 **SNS(네이버/구글/카카오) 간편 로그인**도 지원한다. 부모가 실제로 SNS 계정으로 '독서로'에 가입한 경우 이 설계로는 자동화가 불가능하므로, **부모의 실제 로그인 방식을 먼저 확인**하고 필요 시 스키마/자동화 로직을 SNS 로그인 케이스까지 포함하도록 보완해야 함
 
 > **구현 노트(2026-09-10)**: 위 확인 필요 사항 중 로그인 방식은 확인됐다 — 부모는 **에듀넷 자체 계정**으로 로그인한다(SNS 간편 로그인 아님). 다만 이용약관상 자동화 허용 여부는 여전히 미확인이라, 위 "리스크 재평가" 세 번째 항목의 폴백(수동 등록 가이드)을 MVP 필수 경로로 격상하는 쪽으로 최종 결정했다 — 완전 자동 등록은 만들지 않았다. 5.2(4)의 구현 노트 참고.
+
+> **구현 노트(2026-09-12)**: 위 결정으로 자동 로그인 자격증명을 저장할 일이 없어지면서, 9.2의 `dokseoro_credentials` 테이블은 코드 어디에서도 참조되지 않는 죽은 스키마로 남아 있었다 — `0008_drop_dokseoro_credentials.sql`로 제거했다. 자동 연동을 다시 만들게 되면(이용약관 확인 후) 그때 실제 로그인 방식(에듀넷 자체 계정 vs SNS)에 맞춰 스키마를 다시 설계할 것.
 
 ### 9.8 Supabase/Azure 리소스 견적 및 무료 티어 확인 (2026년 9월 기준)
 

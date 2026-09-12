@@ -22,6 +22,19 @@ cp .env.local.example .env.local   # 값 채우기
 npm run dev
 ```
 
+### 테스트
+
+```bash
+npm run test         # 한 번 실행
+npm run test:watch   # watch 모드
+```
+
+`src/lib/*.test.ts`(Vitest)만 있다 — 외부 의존성(Supabase/Azure/카카오) 없이 순수하게 계산만 하는
+로직(PIN 검증/잠금, 단계별 질문 폴백, 배지 계산, 통계 집계)만 유닛 테스트로 다루고, Next.js
+서버 컴포넌트/API 라우트/RLS 같은 통합 동작은 지금까지처럼 실제 브라우저로 수동 검증한다(각
+Phase 항목의 CLAUDE.md 기록 참고). `server-only`로 막힌 모듈을 테스트에서 import할 수 있도록
+`vitest.config.mts`가 그 패키지를 빈 모듈(`test/stubs/server-only.ts`)로 치환해둔다.
+
 ### Supabase 셋업
 
 1. [supabase.com](https://supabase.com)에서 새 프로젝트 생성 (무료 티어). 생성 화면의 Security 섹션에서
@@ -40,7 +53,9 @@ npm run dev
    - `0005_pin_lockout.sql` — 자녀 PIN 5회 실패 잠금용 컬럼
    - `0006_grants.sql` — anon/authenticated/service_role 테이블 GRANT (위 1번 참고)
    - `0007_avatar_photo.sql` — 자녀 아바타 사진용 비공개 스토리지 버킷(`avatars`) + `profiles.avatar_photo_path` 컬럼
-4. `CHILD_AUTH_SECRET`, `DOKSEORO_CREDENTIALS_ENCRYPTION_KEY`는 `openssl rand -hex 32`로 생성
+   - `0008_drop_dokseoro_credentials.sql` — 쓰이지 않는 `dokseoro_credentials` 테이블 제거('독서로' 연동은 수동 등록 가이드로 확정, 위 "'독서로' 연동" 참고)
+   - `0009_custom_stage_instructions.sql` — 부모가 AI의 단계별 질문 지침을 가족 단위로 바꿀 수 있는 `families.custom_stage_instructions` 컬럼
+4. `CHILD_AUTH_SECRET`은 `openssl rand -hex 32`로 생성
 
 ### Azure 셋업
 

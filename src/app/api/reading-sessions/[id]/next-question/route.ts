@@ -1,22 +1,29 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireChildProfileForApi } from "@/lib/currentProfile";
 import { generateNextQuestion } from "@/lib/azureOpenAI";
 import { fetchBookContext } from "@/lib/kakaoBook";
-import { TOTAL_QUESTIONS, stageForQuestionIndex } from "@/lib/readingSession";
+import { TOTAL_QUESTIONS, stageForQuestionIndex, type StageInstructions } from "@/lib/readingSession";
 import type { ConversationMessage } from "@/lib/types";
 
 // 대화 진행 화면이 매 턴 호출한다. answerText가 있으면 먼저 아이 답변을 messages에 추가하고,
 // 그 다음 답변 개수가 TOTAL_QUESTIONS에 도달했는지 확인해서 done 여부와 다음 질문을 함께 돌려준다.
-// 세션 소유권 확인은 RLS(conversation_sessions_select/update)가 전담한다 — anon key로 충분하다.
+// /read/[id]/chat 페이지 자체가 자녀 전용(requireChildProfile)이라 이 라우트도 동일하게 막는다.
+// 세션 소유권 확인은 RLS(conversation_sessions_select/update)가 전담한다 — 역할까지 자녀로
+// 좁혀두면 RLS의 "child_profile_id = my_profile_id()" 조건까지 자연스럽게 강제된다.
 export async function POST(request: Request, { params }: { params: { id: string } }) {
+  const profile = await requireChildProfileForApi();
+  if (profile instanceof NextResponse) return profile;
+
   const supabase = createClient();
   const { answerText } = await request.json().catch(() => ({ answerText: undefined }));
 
-  const { data: session, error: fetchError } = await supabase
-    .from("conversation_sessions")
-    .select("*")
-    .eq("id", params.id)
-    .maybeSingle();
+  // 세션과 "부모가 커스텀한 질문 지침(families.custom_stage_instructions)"은 서로 의존하지
+  // 않으니 병렬로 가져온다 — family_id는 이미 profile에 있어서 세션 조회를 기다릴 필요가 없다.
+  const [{ data: session, error: fetchError }, { data: family }] = await Promise.all([
+    supabase.from("conversation_sessions").select("*").eq("id", params.id).maybeSingle(),
+    supabase.from("families").select("custom_stage_instructions").eq("id", profile.family_id).maybeSingle(),
+  ]);
 
   if (fetchError || !session) {
     return NextResponse.json({ error: "대화 세션을 찾을 수 없어요." }, { status: 404 });
@@ -49,11 +56,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
     history: messages,
     questionIndex: answeredCount,
     stage,
+    customStageInstructions: (family?.custom_stage_instructions as Partial<StageInstructions> | null) ?? null,
   });
 
   messages.push({
     role: "assistant",
-    content: question ?? "그 책에 대해 더 이야기해줄래?",
+    content: question,
     created_at: new Date().toISOString(),
     stage,
   });
@@ -61,5 +69,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const { error: updateError } = await supabase.from("conversation_sessions").update({ messages }).eq("id", session.id);
   if (updateError) return NextResponse.json({ error: "저장하지 못했어요." }, { status: 500 });
 
-  return NextResponse.json({ done: false, messages });
+  // bookContext를 화면에도 그대로 돌려준다 — 카카오에서 어떤 정보를 참고했는지(찾았다면 그
+  // 내용을, 못 찾았다면 null을) 아이/부모가 알 수 있게 ChatSession이 보여준다.
+  return NextResponse.json({ done: false, messages, bookContext });
 }

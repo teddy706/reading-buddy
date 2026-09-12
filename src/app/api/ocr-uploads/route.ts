@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentProfile } from "@/lib/currentProfile";
+import { requireChildProfileForApi } from "@/lib/currentProfile";
 import { analyzeImage } from "@/lib/documentIntelligence";
 import { parseOcrRecord } from "@/lib/azureOpenAI";
 
 // 클라이언트가 'reading-notes' 버킷에 사진을 먼저 올린 뒤, 그 경로로 이 라우트를 호출한다.
 // OCR 인식이 실패해도(손글씨를 못 읽거나 서비스 오류) 에러를 던지지 않고 status: 'failed'로
 // 기록만 남긴다 — 확인/수정 화면은 실패해도 빈 칸으로 열려서 "직접 입력" 경로를 그대로 제공한다.
+// /read/ocr/new 페이지 자체가 자녀 전용(requireChildProfile)이라 이 라우트도 동일하게 막는다.
 export async function POST(request: Request) {
-  const profile = await getCurrentProfile();
-  if (!profile) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
+  const profile = await requireChildProfileForApi();
+  if (profile instanceof NextResponse) return profile;
 
   const { imagePath } = await request.json();
   if (typeof imagePath !== "string" || !imagePath) {

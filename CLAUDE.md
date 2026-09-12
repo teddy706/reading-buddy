@@ -41,6 +41,7 @@
 - [x] `.env.local.example`, README, PRD 문서화
 - [x] GitHub private 저장소 생성
 - [x] **Supabase 프로젝트 실제 생성 및 마이그레이션 적용 완료** — `teddy706's Org` 조직, 프로젝트명 `reading-buddy`, 리전 ap-northeast-2(Seoul), URL `https://ebtlnygmfmglwxpcqczz.supabase.co`. `.env.local`에 실제 키 반영 완료(gitignored). 테이블 6개 + RLS 정책(families 1/profiles 1/conversation_sessions 3/ocr_uploads 3/reading_records 3) + storage 정책 2개 + `reading-notes` 버킷까지 SQL Editor에서 직접 실행/검증함. `dokseoro_credentials`는 의도대로 정책 0개(완전 차단)
+  - **(2026-09-12 추가) `dokseoro_credentials` 테이블 제거**: Phase 1 "4. '독서로' 자동 연동"이 자동 로그인 자격증명을 저장하지 않는 "수동 등록 가이드" 버전으로 확정된 뒤, 이 테이블이 `src/` 어디에서도 참조되지 않는 죽은 스키마로 남아 있던 것을 코드 리뷰 중 발견 — `0008_drop_dokseoro_credentials.sql`로 제거함(트리거·RLS 정책은 테이블과 함께 자동으로 사라짐). `.env.local.example`의 `DOKSEORO_CREDENTIALS_ENCRYPTION_KEY`, README 3-4번 항목, `docs/PRD.md` 9.2/9.3/9.7의 관련 서술도 함께 정리함(PRD는 삭제 대신 취소선 + 구현 노트로 이력을 남김). **사용자가 실제 Supabase 프로젝트의 SQL Editor에서 `0008_drop_dokseoro_credentials.sql`을 아직 실행하지 않았다면, 다른 마이그레이션과 마찬가지로 번호 순서에 맞춰 직접 실행해야 실제 DB에도 반영된다** — 이 코드베이스의 마이그레이션은 `supabase db push`가 아니라 지금까지 전부 SQL Editor 수동 실행으로 적용해왔음. 이제 테이블은 5개(families/profiles/conversation_sessions/ocr_uploads/reading_records)
 - [x] **Azure 리소스 실제 생성 및 연결 확인 완료** — 전부 리소스 그룹 `RG-reading-buddy`(Korea Central) 아래: `reading-buddy-openai`(Azure OpenAI, 배포 `gpt-4o`/`gpt-5.4-mini` 둘 다 `curl`로 실제 채팅 호출 성공 확인), `reading-buddy-speech`(Azure AI Speech, 토큰 발급 확인), `reading-buddy-docintel`(Document Intelligence, `/documentintelligence/info` 확인). `.env.local`에 전부 반영 완료
 - [x] **카카오 도서 검색 API 연동 완료** — Kakao Developers 앱 "리딩버디"(ID 1573541) 생성, REST API 키를 `.env.local`의 `KAKAO_REST_API_KEY`에 반영, `src/lib/kakaoBook.ts`로 대화 질문 생성에 연결(아래 Phase 1 2번 참고). 알라딘은 미연동
 
@@ -94,6 +95,21 @@ PRD 4.2 "MVP 이후 로드맵" 후보 중 사용자가 명시적으로 아래 4�
 3. **인증 확인이 요청마다 두 번.** `middleware.ts`가 모든 요청에서 `supabase.auth.getUser()`로 세션을 이미 검증/갱신하는데, `src/lib/currentProfile.ts`의 `getCurrentProfile()`이 페이지 렌더 때 또 `getUser()`를 호출해 Supabase Auth 서버에 왕복 하나를 더 만들고 있었다. 미들웨어가 같은 요청 생명주기 안에서 이미 검증을 마쳤으므로, 페이지 쪽은 쿠키의 JWT를 네트워크 없이 로컬에서 읽는 `getSession()`으로 바꿔 왕복 하나를 없앰 — 이 함수가 거의 모든 페이지에서 호출되는 만큼 전역적으로 효과가 있다.
 
 `router.push(...); router.refresh();` 패턴(로그인/PIN/로그아웃 직후 여러 곳에 있음)은 일부러 그대로 뒀다 — 형제자매가 같은 URL(`/home` 등)을 서로 다른 세션으로 방문할 때 Next.js Router Cache가 이전 아이의 캐시된 화면을 보여줄 위험이 있어서 넣어둔 방어 코드로 보이고, 섣불리 지우면 "동생 로그인했는데 형 데이터가 잠깐 보이는" 종류의 버그가 재발할 수 있다. 대신 위 3가지로 그 안에서 일어나는 실제 데이터 조회 자체를 빠르게 만드는 방향으로 접근함.
+
+## 유닛 테스트 도입 (2026-09-12)
+
+지금까지 전부 실제 브라우저 수동 검증으로만 확인해왔고 자동 테스트가 하나도 없었다 — 코드 리뷰에서 지적된 항목. Next.js 서버 컴포넌트/API 라우트/RLS 같은 통합 동작까지 자동화하려면 Supabase/Azure를 모킹하는 큰 작업이 필요해서 범위 밖으로 남겨두고, **외부 의존성이 전혀 없는 순수 함수부터** Vitest로 유닛 테스트를 추가했다: `src/lib/readingSession.ts`(단계별 질문 매핑/폴백), `src/lib/badges.ts`(배지 계산, 형제자매 비교 경계값 포함), `src/lib/readingStats.ts`(월별 집계), `src/lib/childAuth.ts`(PIN 검증/잠금 판정, PIN→비밀번호 파생의 결정론성, bcrypt 해시). 총 31개 테스트, `npm run test`로 실행(README "테스트" 절 참고).
+
+- `server-only`로 막힌 모듈(`childAuth.ts` 등)을 일반 Node 런타임(vitest)에서 그냥 import하면 그 패키지 자체가 무조건 예외를 던진다(react-server 조건이 있을 때만 빈 모듈로 치환되는 구조라, Next.js 빌드 밖에서는 항상 실제 `index.js`가 로드됨) — `vitest.config.mts`에서 `server-only`를 `test/stubs/server-only.ts`(빈 모듈)로 alias해서 우회함
+- vitest 최신 메이저(5.x)는 peer로 `@types/node@^22`/`vite@^6~8`을 요구해 이 프로젝트의 `@types/node@^20`과 충돌 — 굳이 그 버전을 맞추려고 프로젝트 전체의 `@types/node`를 올리는 대신, vite를 직접 의존성으로 갖고 있고 peer 요구가 느슨한 `vitest@^2.1.9`로 설치함
+- 이 커밋 이후 새로 추가하는 순수 로직(외부 API 호출 없이 입력→출력만 있는 함수)에는 유닛 테스트를 같이 추가하는 게 좋다 — 이미 `vitest.config.mts`가 `src/**/*.test.ts`를 자동으로 주워간다
+
+## 사용자 피드백 4건 반영 (2026-09-12)
+
+1. **카카오 도서 정보 조회 결과를 화면에 노출**: `next-question` 라우트가 매 턴 조회하던 `bookContext`(카카오 줄거리 요약)가 지금까지 질문 생성에만 쓰이고 화면 어디에도 드러나지 않았다. `ChatSession`이 이제 API 응답의 `bookContext`를 받아 찾았으면 "📖 참고한 책 정보 보기"로 펼쳐볼 수 있게 하고, 못 찾았으면 "책 정보를 찾지 못해서 제목만으로 질문하고 있어요"라고 알려준다. 세션에 영구 저장하지는 않는, 그 턴의 채팅 화면에서만 보이는 정보다.
+2. **부모 화면에서 아이 답변 vs AI 감상문 구분**: `RecordDetail`(`/records/[id]`)이 대화로 만든 기록일 때 AI가 정리한 감상문(`content`)과 아이가 실제로 답변한 원본 대화(`conversation_sessions.messages`)를 명확히 구분해서 보여준다 — "🤖 AI가 정리한 감상문"이라는 라벨과 "🗣️ 아이가 답변한 원본 대화 보기" 토글을 추가했다. 저장 직후 리뷰 화면(`ReviewSession`)에는 원래도 "원본 대화 펼쳐보기"가 있었지만, 저장된 기록을 나중에 다시 볼 때(부모의 `/settings/records` 경유 포함)는 대조할 방법이 없었다.
+3. **AI 질문 패턴을 부모가 수정 가능하게**: 매번 같은 질문 패턴이 지루할 수 있다는 피드백. 전체 시스템 프롬프트 자유 입력이나 프리셋 선택 대신, **단계별 지침 문구만 수정**하는 방식을 사용자가 직접 선택함(AI가 이상하게 동작할 위험이 적고 구현 범위가 명확). `families.custom_stage_instructions`(jsonb, `0009_custom_stage_instructions.sql`)에 `{"1": "...", "2": "...", "3": "..."}` 형태로 저장하고, 없으면 `src/lib/readingSession.ts`의 `DEFAULT_STAGE_INSTRUCTIONS`로 폴백(`resolveStageInstruction`). 부모 전용 `/settings/coach` 화면에서 단계별 지침을 수정/저장/기본값 되돌리기 할 수 있고, `/api/family/coach-settings`(PATCH, admin 클라이언트)가 저장을 처리한다. `next-question` 라우트가 세션 조회와 병렬로 이 값을 가져와 `generateNextQuestion`에 전달한다. `families` 테이블은 원래 select 정책만 있고 쓰기는 서버(service role)에서만 하므로 새 RLS 정책은 필요 없었다. **`0009_custom_stage_instructions.sql`을 실제 Supabase 프로젝트에 적용 완료** — `/settings/coach` 기능이 실제 DB에서도 동작한다.
+4. **'독서로' 등록 완료 표시는 부모만**: `RecordDetail`의 "✅ '독서로'에 등록했어요" / "등록 취소로 되돌리기" 토글을 지금까지는 자녀도 누를 수 있었다(실제 '독서로' 사이트 로그인·등록은 부모가 하는 일인데 상태 표시는 누구나 바꿀 수 있었던 불일치). `canManageDokseoro` prop으로 화면에서 부모가 아니면 버튼 대신 안내 문구만 보이게 했고, `/api/reading-records/[id]` PATCH도 `dokseoroStatus` 필드가 요청에 있을 때 `profile.role !== 'parent'`면 403을 반환하도록 서버 쪽에도 같은 규칙을 넣었다(RLS는 가족/본인 여부만 가리고 역할별 필드 제한은 못 하므로 라우트가 직접 확인).
 
 ## 참고 문서
 

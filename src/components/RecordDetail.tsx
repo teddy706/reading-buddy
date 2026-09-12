@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { DokseoroStatusBadge } from "@/components/DokseoroStatusBadge";
-import type { ReadingRecord } from "@/lib/types";
+import type { ConversationMessage, ReadingRecord } from "@/lib/types";
 
 const SOURCE_LABEL: Record<ReadingRecord["source_type"], string> = {
   conversation: "💬 대화로 기록",
@@ -20,12 +20,18 @@ export function RecordDetail({
   childName,
   childAvatar,
   childAvatarPhotoUrl,
+  conversationMessages,
+  canManageDokseoro,
   backHref,
 }: {
   record: ReadingRecord;
   childName: string | null;
   childAvatar: string | null;
   childAvatarPhotoUrl?: string | null;
+  conversationMessages?: ConversationMessage[] | null;
+  // '독서로' 실제 등록은 부모가 그 사이트에 로그인해서 하는 일이라, "등록했어요" 상태 전환도
+  // 부모만 할 수 있게 한다 — 서버(reading-records PATCH)도 같은 규칙을 강제한다.
+  canManageDokseoro: boolean;
   backHref: string;
 }) {
   const router = useRouter();
@@ -38,6 +44,9 @@ export function RecordDetail({
   const [dokseoroStatus, setDokseoroStatus] = useState(record.dokseoro_status);
   const [copied, setCopied] = useState(false);
   const [markingStatus, setMarkingStatus] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(false);
+
+  const childAnswerCount = (conversationMessages ?? []).filter((m) => m.role === "child").length;
 
   const dirty = bookTitle !== record.book_title || recordedDate !== record.recorded_at || content !== record.content;
 
@@ -115,8 +124,40 @@ export function RecordDetail({
       <label className="mb-1 text-sm font-semibold text-soft">읽은 날짜</label>
       <input type="date" value={recordedDate} onChange={(e) => setRecordedDate(e.target.value)} className="input" />
 
-      <label className="mb-1 text-sm font-semibold text-soft">내용</label>
+      <label className="mb-1 text-sm font-semibold text-soft">
+        내용{record.source_type === "conversation" && <span className="font-normal text-soft"> · 🤖 AI가 정리한 감상문</span>}
+      </label>
+      {record.source_type === "conversation" && childAnswerCount > 0 && (
+        <p className="mb-1 text-xs text-soft">
+          아이의 답변을 바탕으로 AI가 문장을 다듬어 정리했어요. 아이가 실제로 한 말은 아래에서 확인할 수 있어요.
+        </p>
+      )}
       <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={8} className="input" />
+
+      {childAnswerCount > 0 && (
+        <div className="mb-3">
+          <button
+            type="button"
+            onClick={() => setShowTranscript((v) => !v)}
+            className="text-left text-sm font-semibold text-accent underline"
+          >
+            {showTranscript ? "아이가 답변한 원본 대화 접기" : `🗣️ 아이가 답변한 원본 대화 보기 (${childAnswerCount}개)`}
+          </button>
+          {showTranscript && (
+            <div className="card mt-2">
+              <p className="mb-2 text-xs font-semibold text-soft">
+                위 감상문은 AI가 다듬은 결과예요. 아래는 아이가 실제로 한 말 그대로예요.
+              </p>
+              {(conversationMessages ?? []).map((m, i) => (
+                <p key={i} className={`mb-2 text-sm ${m.role === "child" ? "font-semibold" : "text-soft"}`}>
+                  {m.role === "child" ? "🗣️ 아이: " : "🤖 질문: "}
+                  {m.content}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {error && <p className="mb-2 text-sm font-semibold text-red-500">{error}</p>}
       {saved && <p className="mb-2 text-sm font-semibold text-a">저장했어요!</p>}
@@ -139,24 +180,28 @@ export function RecordDetail({
           &apos;독서로&apos; 사이트 열기 ↗
         </a>
 
-        {dokseoroStatus === "synced" ? (
-          <button
-            type="button"
-            onClick={() => onMarkDokseoro("pending")}
-            disabled={markingStatus}
-            className="btn btn-ghost mb-0"
-          >
-            등록 취소로 되돌리기
-          </button>
+        {canManageDokseoro ? (
+          dokseoroStatus === "synced" ? (
+            <button
+              type="button"
+              onClick={() => onMarkDokseoro("pending")}
+              disabled={markingStatus}
+              className="btn btn-ghost mb-0"
+            >
+              등록 취소로 되돌리기
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onMarkDokseoro("synced")}
+              disabled={markingStatus}
+              className="btn btn-primary mb-0"
+            >
+              {markingStatus ? "저장하는 중..." : "✅ '독서로'에 등록했어요"}
+            </button>
+          )
         ) : (
-          <button
-            type="button"
-            onClick={() => onMarkDokseoro("synced")}
-            disabled={markingStatus}
-            className="btn btn-primary mb-0"
-          >
-            {markingStatus ? "저장하는 중..." : "✅ '독서로'에 등록했어요"}
-          </button>
+          <p className="text-xs text-soft">등록 완료 표시는 부모님만 바꿀 수 있어요.</p>
         )}
       </div>
 
