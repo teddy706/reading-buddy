@@ -29,6 +29,10 @@ export function NewBookForm() {
   // 지금까지처럼 직접 입력한 텍스트로도 그냥 진행할 수 있게 둔다(카카오에 없는 책도 있으므로).
   const [titleSuggestions, setTitleSuggestions] = useState<BookCandidate[]>([]);
   const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
+  // 검색이 실제로 끝난 검색어 — 결과가 0건일 때 "검색 중"과 "찾아봤지만 없음"을 구분해서
+  // 보여주는 데 쓴다(그림책/동화책은 카카오 도서 검색에 잘 안 걸리는 경우가 많아서, 없어도
+  // 당황하지 않고 직접 입력으로 진행하면 된다는 걸 분명히 알려주기 위함).
+  const [lastSearchedQuery, setLastSearchedQuery] = useState<string | null>(null);
   // 후보를 골라서 title을 프로그램적으로 채운 직후엔, 같은 값으로 다시 검색해서 방금 접은
   // 목록이 곧바로 다시 뜨는 걸 막는다.
   const skipNextTitleSearchRef = useRef(false);
@@ -41,6 +45,7 @@ export function NewBookForm() {
     const query = title.trim();
     if (query.length < MIN_TITLE_SEARCH_LENGTH) {
       setTitleSuggestions([]);
+      setLastSearchedQuery(null);
       return;
     }
     const timer = setTimeout(async () => {
@@ -50,6 +55,8 @@ export function NewBookForm() {
         setTitleSuggestions((data.candidates ?? []) as BookCandidate[]);
       } catch {
         setTitleSuggestions([]);
+      } finally {
+        setLastSearchedQuery(query);
       }
     }, TITLE_SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
@@ -216,6 +223,16 @@ export function NewBookForm() {
               ))}
             </div>
           )}
+          {showTitleSuggestions &&
+            titleSuggestions.length === 0 &&
+            lastSearchedQuery === title.trim() && (
+              <div className="absolute inset-x-0 top-full z-10 -mt-1 rounded-2xl border-2 border-ink bg-white p-3 shadow-card">
+                <p className="text-xs text-soft">
+                  검색에서 이 책을 찾지 못했어요. 그림책·동화책은 검색에 잘 안 나오는 경우가 많아요
+                  — 지금 입력한 제목으로 그대로 진행할 수 있어요.
+                </p>
+              </div>
+            )}
         </div>
         <input
           type="text"
