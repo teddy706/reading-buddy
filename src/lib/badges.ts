@@ -94,6 +94,18 @@ export interface YearlyChallenge {
   count: number;
   target: number;
   earned: boolean;
+  // 그해 1~12월 권수(index 0 = 1월) — 사용자 요청으로 "월별 달성도"를 함께 보여주기 위해 추가.
+  monthlyCounts: number[];
+}
+
+function monthlyCountsForYear(records: ReadingRecord[], year: string): number[] {
+  const counts = new Array(12).fill(0);
+  for (const r of records) {
+    if (r.recorded_at.slice(0, 4) !== year) continue;
+    const monthIndex = Number(r.recorded_at.slice(5, 7)) - 1;
+    counts[monthIndex] += 1;
+  }
+  return counts;
 }
 
 // currentYearKey는 항상 목록에 포함(그해 기록이 0건이어도 "올해의 챌린지"를 보여주기 위함).
@@ -114,5 +126,6 @@ export function computeYearlyChallenges(childRecords: ReadingRecord[], currentYe
       count,
       target: YEARLY_CHALLENGE_TARGET,
       earned: count >= YEARLY_CHALLENGE_TARGET,
+      monthlyCounts: monthlyCountsForYear(childRecords, year),
     }));
 }

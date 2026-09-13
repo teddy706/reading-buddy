@@ -99,9 +99,11 @@ describe("computeBadges", () => {
 });
 
 describe("computeYearlyChallenges", () => {
-  it("기록이 하나도 없어도 올해 챌린지는 0권 진행 중으로 포함한다", () => {
+  it("기록이 하나도 없어도 올해 챌린지는 0권 진행 중으로 포함하고, 월별 내역도 전부 0이다", () => {
     const challenges = computeYearlyChallenges([], "2026");
-    expect(challenges).toEqual([{ year: "2026", count: 0, target: YEARLY_CHALLENGE_TARGET, earned: false }]);
+    expect(challenges).toEqual([
+      { year: "2026", count: 0, target: YEARLY_CHALLENGE_TARGET, earned: false, monthlyCounts: new Array(12).fill(0) },
+    ]);
   });
 
   it("연도별로 권수를 세고 목표(100권) 달성 여부를 판정한다", () => {
@@ -110,18 +112,15 @@ describe("computeYearlyChallenges", () => {
       ...Array.from({ length: 42 }, () => record({ recorded_at: "2026-03-01" })),
     ];
     const challenges = computeYearlyChallenges(records, "2026");
-    expect(challenges.find((c) => c.year === "2025")).toEqual({
-      year: "2025",
-      count: 100,
-      target: YEARLY_CHALLENGE_TARGET,
-      earned: true,
-    });
-    expect(challenges.find((c) => c.year === "2026")).toEqual({
-      year: "2026",
-      count: 42,
-      target: YEARLY_CHALLENGE_TARGET,
-      earned: false,
-    });
+    const y2025 = challenges.find((c) => c.year === "2025");
+    expect(y2025?.count).toBe(100);
+    expect(y2025?.earned).toBe(true);
+    expect(y2025?.monthlyCounts[4]).toBe(100); // index 4 = 5월
+
+    const y2026 = challenges.find((c) => c.year === "2026");
+    expect(y2026?.count).toBe(42);
+    expect(y2026?.earned).toBe(false);
+    expect(y2026?.monthlyCounts[2]).toBe(42); // index 2 = 3월
   });
 
   it("최신 연도가 먼저 오도록 내림차순 정렬한다", () => {
@@ -133,5 +132,17 @@ describe("computeYearlyChallenges", () => {
   it("기록이 없는 과거 연도는 목록에 넣지 않는다(활동하지 않은 해까지 빈 챌린지로 나열하지 않음)", () => {
     const challenges = computeYearlyChallenges([record({ recorded_at: "2026-01-01" })], "2026");
     expect(challenges).toHaveLength(1);
+  });
+
+  it("월별 권수는 그 해의 기록만 반영하고 다른 해 기록은 섞이지 않는다", () => {
+    const records = [
+      record({ recorded_at: "2026-01-15" }),
+      record({ recorded_at: "2026-01-20" }),
+      record({ recorded_at: "2025-12-31" }),
+    ];
+    const challenges = computeYearlyChallenges(records, "2026");
+    const y2026 = challenges.find((c) => c.year === "2026")!;
+    expect(y2026.monthlyCounts[0]).toBe(2); // 1월
+    expect(y2026.monthlyCounts.reduce((a, b) => a + b, 0)).toBe(2);
   });
 });
