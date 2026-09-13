@@ -65,6 +65,7 @@ flowchart LR
 | 프론트엔드 프레임워크 | Next.js 14.2.35 (App Router) | 서버 컴포넌트 위주, 클라이언트 컴포넌트는 폼/대화형 UI에 한정 |
 | UI | React 18 + Tailwind CSS | 차트도 별도 라이브러리 없이 순수 CSS(`div` 비율)로 구현(6.2 참고). 모바일은 고정폭(`.app-shell`, 480px), 태블릿/PC에서는 전 화면이 단계적으로 넓어짐(2026-09-12, §6.8 참고) |
 | 폰트 | 프리텐다드(Pretendard) Variable | `next/font/local`로 셀프 호스팅(`src/app/fonts/PretendardVariable.woff2`). 원래 있던 Geist 폰트 로딩은 CSS 어디에서도 참조되지 않는 죽은 설정이었음(2026-09-12 교체 시 발견) |
+| 앱 명칭/아이콘 | '리딩버디 (Reading Buddy)' 공식 확정 | `public/manifest.json`(이름/설명/아이콘 목록) + `public/icons/`(192·512, 마스커블 192·512, 애플 터치) + `public/favicon.ico`·`favicon-16x16`·`favicon-32x32`. 최초 후보 '도란도란'은 기존 앱명과 겹쳐 폐기(2026-09-13) |
 | 언어 | TypeScript | `tsc --noEmit`로 타입 검사 |
 | DB/Auth/Storage | Supabase (`@supabase/supabase-js`, `@supabase/ssr`) | Postgres 15, RLS 활성화 |
 | AI SDK | `openai` npm 패키지 | Azure OpenAI를 OpenAI 호환 엔드포인트로 호출(baseURL을 Azure로 지정) |
@@ -365,7 +366,6 @@ Next.js는 `"use client"`가 선언된 모듈을 서버 컴포넌트가 import�
 | 장르 분포 통계 미구현 | 스키마에 장르 컬럼이 없음 — 카카오 API 응답을 저장하는 컬럼과 마이그레이션이 선행돼야 함 |
 | '독서로' 완전 자동화 미구현 | 이용약관상 자동화 허용 여부 미확인 — PRD 9.7 |
 | Supabase 무료 프로젝트 7일 비활성 자동 일시정지 | 정기 핑(cron) 미구현 — 방학 등 공백기 리스크 |
-| PWA 설치 아이콘 미설정 | `manifest.json`의 `icons: []` — 실제 홈 화면 설치 아이콘 없음 |
 | 도서 메타데이터 API 잔존 코드 | 네이버 연동 코드는 서비스 종료 후에도 남아 있음(키 보유자를 위한 하위 호환, 해는 없음) |
 | 마이그레이션 적용 방식 | `supabase db push`가 아니라 SQL Editor 수동 실행 — 새 마이그레이션 추가 시 사람이 직접 실행해야 실제 DB에 반영됨(자동화 없음) |
 
