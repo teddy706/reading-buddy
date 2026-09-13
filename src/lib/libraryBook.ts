@@ -1,11 +1,13 @@
 import "server-only";
 import type { BookCandidate } from "@/lib/kakaoBook";
+import { pickIsbnFromApiField } from "@/lib/isbn";
 
 interface LibraryBookDoc {
   bookname: string;
   authors: string;
   publisher: string;
   bookImageURL?: string;
+  isbn13?: string;
 }
 
 // data4library의 authors 필드는 "지은이 지음ㅣ옮긴이 옮김"처럼 역할 표기와 여러 사람이
@@ -51,6 +53,7 @@ export async function searchLibraryBooks(query: string, size = 5): Promise<BookC
         author: doc.authors ? firstAuthor(doc.authors) : null,
         thumbnail: doc.bookImageURL || null,
         description: null,
+        isbn: pickIsbnFromApiField(doc.isbn13),
       }))
       .filter((candidate) => candidate.title);
   } catch {

@@ -6,6 +6,7 @@ import { Avatar } from "@/components/Avatar";
 import { BackLink } from "@/components/BackLink";
 import { DokseoroStatusBadge } from "@/components/DokseoroStatusBadge";
 import { naverBookSearchUrl } from "@/lib/externalBookSearch";
+import { normalizeIsbnInput } from "@/lib/isbn";
 import type { ConversationMessage, ReadingRecord } from "@/lib/types";
 
 const SOURCE_LABEL: Record<ReadingRecord["source_type"], string> = {
@@ -38,6 +39,10 @@ export function RecordDetail({
   const router = useRouter();
   const [bookTitle, setBookTitle] = useState(record.book_title);
   const [pageCount, setPageCount] = useState(record.page_count != null ? String(record.page_count) : "");
+  // 생기부 독서활동상황란은 ISBN에 등재된 도서에 한해 기재 가능하다는 교육부 지침에 따라
+  // 추가 — 자동완성/표지 인식으로 고른 기록은 자동으로 채워져 있고, 그 외(직접 입력/OCR)는
+  // 비어 있을 수 있어 여기서 나중에 채워 넣을 수 있다(페이지 수와 동일한 패턴).
+  const [isbn, setIsbn] = useState(record.isbn ?? "");
   const [recordedDate, setRecordedDate] = useState(record.recorded_at);
   const [content, setContent] = useState(record.content);
   const [saving, setSaving] = useState(false);
@@ -53,6 +58,7 @@ export function RecordDetail({
   const dirty =
     bookTitle !== record.book_title ||
     pageCount !== (record.page_count != null ? String(record.page_count) : "") ||
+    isbn !== (record.isbn ?? "") ||
     recordedDate !== record.recorded_at ||
     content !== record.content;
 
@@ -78,12 +84,30 @@ export function RecordDetail({
     return parsed;
   }
 
+  // ISBN도 페이지 수와 같은 원칙 — 비어 있으면 그대로 두고(강제하지 않음), 값이 있으면
+  // 10자리 또는 13자리 형식인지만 확인한다(체크섬까지는 검증하지 않음).
+  function parseIsbnInput(): string | undefined {
+    if (!isbn.trim()) return undefined;
+    const normalized = normalizeIsbnInput(isbn);
+    if (!normalized) {
+      throw new Error("ISBN은 10자리 또는 13자리 숫자로 입력해주세요.");
+    }
+    return normalized;
+  }
+
   async function onSave() {
     setSaving(true);
     setError(null);
     try {
       const parsedPageCount = parsePageCountInput();
-      await patchRecord({ bookTitle, content, recordedDate, ...(parsedPageCount !== undefined ? { pageCount: parsedPageCount } : {}) });
+      const parsedIsbn = parseIsbnInput();
+      await patchRecord({
+        bookTitle,
+        content,
+        recordedDate,
+        ...(parsedPageCount !== undefined ? { pageCount: parsedPageCount } : {}),
+        ...(parsedIsbn !== undefined ? { isbn: parsedIsbn } : {}),
+      });
       setSaved(true);
       router.refresh();
       setTimeout(() => setSaved(false), 1500);
@@ -101,12 +125,14 @@ export function RecordDetail({
       // 상태와 함께 현재 화면에 있는 최신 내용도 같이 저장해서, "등록 완료"로 표시한 시점의
       // 내용과 실제로 복사해 붙여넣은 내용이 어긋나지 않게 한다.
       const parsedPageCount = parsePageCountInput();
+      const parsedIsbn = parseIsbnInput();
       await patchRecord({
         bookTitle,
         content,
         recordedDate,
         dokseoroStatus: next,
         ...(parsedPageCount !== undefined ? { pageCount: parsedPageCount } : {}),
+        ...(parsedIsbn !== undefined ? { isbn: parsedIsbn } : {}),
       });
       setDokseoroStatus(next);
       router.refresh();
@@ -122,6 +148,7 @@ export function RecordDetail({
       `책 제목: ${bookTitle}`,
       record.book_author ? `저자: ${record.book_author}` : null,
       pageCount.trim() ? `페이지 수: ${pageCount.trim()}쪽` : null,
+      isbn.trim() ? `ISBN: ${isbn.trim()}` : null,
       `읽은 날짜: ${recordedDate}`,
       "",
       content,
@@ -177,6 +204,29 @@ export function RecordDetail({
         placeholder="예: 132"
         value={pageCount}
         onChange={(e) => setPageCount(e.target.value)}
+        className="input"
+      />
+
+      <div className="mb-1 flex items-center justify-between">
+        <label className="text-sm font-semibold text-soft">ISBN (선택)</label>
+        {bookTitle.trim() && (
+          <a
+            href={naverBookSearchUrl(bookTitle, record.book_author)}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs font-semibold text-accent underline"
+          >
+            🔍 찾아보기
+          </a>
+        )}
+      </div>
+      {/* 생기부 독서활동상황란은 ISBN에 등재된 도서에 한해 책 제목/저자를 기재할 수 있다는
+          교육부 지침에 따라 추가 — 자동완성/표지 인식으로 고른 기록은 이미 채워져 있고,
+          그 외(직접 입력·OCR)는 비어 있을 수 있어 나중에 채워 넣을 수 있게 편집 가능하게 둔다. */}
+      <input
+        value={isbn}
+        onChange={(e) => setIsbn(e.target.value)}
+        placeholder="예: 9788983920770 (책 뒤표지 바코드 위 숫자)"
         className="input"
       />
 

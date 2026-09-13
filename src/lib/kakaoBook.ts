@@ -1,10 +1,12 @@
 import "server-only";
+import { pickIsbnFromApiField } from "@/lib/isbn";
 
 interface KakaoBookDocument {
   title: string;
   authors: string[];
   contents: string;
   thumbnail?: string;
+  isbn?: string;
 }
 
 export interface BookCandidate {
@@ -12,6 +14,9 @@ export interface BookCandidate {
   author: string | null;
   thumbnail: string | null;
   description: string | null;
+  // ISBN-13(없으면 ISBN-10) — 생기부 독서활동 등재·'독서로' 등록에 쓰인다(pickIsbnFromApiField
+  // 참고). 검색 API가 그대로 내려주는 값이라 별도 조회 없이 채워진다.
+  isbn: string | null;
 }
 
 // 책 제목으로 줄거리 요약을 가져와 질문 생성 프롬프트의 컨텍스트로 쓴다(PRD 6.4) — AI 내장
@@ -62,6 +67,7 @@ export async function searchBooks(query: string, size = 5): Promise<BookCandidat
       author: d.authors?.[0] ?? null,
       thumbnail: d.thumbnail || null,
       description: d.contents?.trim().slice(0, 200) || null,
+      isbn: pickIsbnFromApiField(d.isbn),
     }));
   } catch {
     return [];

@@ -35,6 +35,10 @@ export interface ReadingRecord {
   // 책의 총 페이지 수(0010_page_count.sql). 도서 검색 API가 제공하지 않아 사람이 직접
   // 입력한다 — 기존 기록에는 값이 없을 수 있어 nullable, 기록 상세 화면에서 채워 넣을 수 있다.
   page_count: number | null;
+  // ISBN(0011_book_isbn.sql) — 생기부 독서활동상황란은 ISBN에 등재된 도서에 한해 기재
+  // 가능하다는 교육부 지침에 따라 추가. 자동완성/표지 인식으로 고른 경우에만 자동으로
+  // 채워지고, 직접 입력했거나 OCR로 만든 기록은 비어있을 수 있어 기록 상세에서 채워 넣을 수 있다.
+  isbn: string | null;
   source_type: RecordSourceType;
   content: string;
   source_ref_id: string | null;
@@ -73,6 +77,8 @@ export interface ConversationSession {
   // 대화 시작 화면(NewBookForm)에서 책 제목/저자와 함께 입력받는다. 감상문 저장 시
   // reading_records.page_count로 그대로 복사된다(0010_page_count.sql).
   book_page_count: number | null;
+  // 검색 후보를 골랐을 때만 채워진다(0011_book_isbn.sql) — 감상문 저장 시 reading_records.isbn으로 복사.
+  book_isbn: string | null;
   messages: ConversationMessage[];
   status: ConversationStatus;
   created_at: string;

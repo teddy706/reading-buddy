@@ -20,6 +20,11 @@ export function NewBookForm() {
   // 채울 수 없다. 책 표지/뒷면에 적힌 숫자를 아이/부모가 직접 입력한다(문자열로 들고 있다가
   // 제출 시 정수로 변환·검증).
   const [pageCount, setPageCount] = useState("");
+  // 검색 후보를 골랐을 때만 채워진다(생기부 독서활동 등재는 ISBN에 등재된 도서만 가능하다는
+  // 교육부 지침 참고) — 직접 타이핑한 제목은 어느 판본인지 특정할 수 없어 비워둔다. 후보를
+  // 고른 뒤에 제목을 직접 고쳐 쓰면(더는 그 후보가 아니게 되므로) 비워서 잘못된 ISBN이
+  // 다른 책에 붙는 걸 막는다.
+  const [isbn, setIsbn] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [lookupLoading, setLookupLoading] = useState(false);
@@ -96,6 +101,7 @@ export function NewBookForm() {
     skipNextTitleSearchRef.current = true;
     setTitle(candidate.title);
     setAuthor(candidate.author ?? "");
+    setIsbn(candidate.isbn);
     setCandidates(null);
     setTitleSuggestions([]);
   }
@@ -104,6 +110,7 @@ export function NewBookForm() {
     skipNextTitleSearchRef.current = true;
     setTitle(candidate.title);
     setAuthor(candidate.author ?? "");
+    setIsbn(candidate.isbn);
     setTitleSuggestions([]);
     setShowTitleSuggestions(false);
   }
@@ -144,6 +151,7 @@ export function NewBookForm() {
           book_title: trimmedTitle,
           book_author: author.trim() || null,
           book_page_count: parsedPageCount,
+          book_isbn: isbn,
         })
         .select()
         .single();
@@ -215,7 +223,12 @@ export function NewBookForm() {
             type="text"
             placeholder="책 제목 (표지에 적힌 그대로)"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              // 후보를 고른 뒤 제목을 손으로 고치면 더는 그 후보가 아니므로, 엉뚱한 책에
+              // ISBN이 붙어있지 않게 비운다.
+              setIsbn(null);
+            }}
             onFocus={() => setShowTitleSuggestions(true)}
             onBlur={() => setTimeout(() => setShowTitleSuggestions(false), 150)}
             required
@@ -264,6 +277,11 @@ export function NewBookForm() {
           onChange={(e) => setAuthor(e.target.value)}
           className="input"
         />
+        {isbn && (
+          // 검색 결과에서 후보를 골랐을 때만 보인다 — 생기부 독서활동 등재에는 ISBN이
+          // 등재된 도서만 가능해서, 확인됐다는 걸 미리 알려주면 부모가 안심할 수 있다.
+          <p className="mb-2.5 -mt-1 text-xs text-soft">✅ ISBN 확인됨 ({isbn}) — 생기부 독서활동 등재에 활용할 수 있어요</p>
+        )}
         <div className="mb-1 flex items-center justify-between">
           <label className="text-sm font-semibold text-soft">책 페이지 수 (책 뒷면·마지막 쪽에 있어요)</label>
           {title.trim() && (

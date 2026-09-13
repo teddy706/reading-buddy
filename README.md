@@ -33,7 +33,7 @@ npm run test:watch   # watch 모드
 질문 폴백, 배지 계산, 통계 집계, 도서 검색 결과 중복 제거, 기록 검색어 이스케이프 등)만
 유닛 테스트(`src/lib/*.test.ts`, `src/components/*.test.ts`)로 다루고, Next.js 서버 컴포넌트/
 API 라우트/RLS 같은 통합 동작은 지금까지처럼 실제 브라우저로 수동 검증한다(각 Phase 항목의
-CLAUDE.md 기록 참고). 현재 9개 파일 54개 테스트. `server-only`로 막힌 모듈을 테스트에서
+CLAUDE.md 기록 참고). 현재 10개 파일 63개 테스트. `server-only`로 막힌 모듈을 테스트에서
 import할 수 있도록 `vitest.config.mts`가 그 패키지를 빈 모듈(`test/stubs/server-only.ts`)로
 치환해둔다.
 
@@ -58,6 +58,7 @@ import할 수 있도록 `vitest.config.mts`가 그 패키지를 빈 모듈(`test
    - `0008_drop_dokseoro_credentials.sql` — 쓰이지 않는 `dokseoro_credentials` 테이블 제거('독서로' 연동은 수동 등록 가이드로 확정, 위 "'독서로' 연동" 참고)
    - `0009_custom_stage_instructions.sql` — 부모가 AI의 단계별 질문 지침을 가족 단위로 바꿀 수 있는 `families.custom_stage_instructions` 컬럼
    - `0010_page_count.sql` — 책 페이지 수를 기록하는 `conversation_sessions.book_page_count`/`reading_records.page_count` 컬럼(도서 검색 API가 페이지 수를 제공하지 않아 사람이 직접 입력)
+   - `0011_book_isbn.sql` — ISBN을 기록하는 `conversation_sessions.book_isbn`/`reading_records.isbn` 컬럼(생기부 독서활동상황란이 ISBN 등재 도서에 한해 기재 가능하다는 교육부 지침에 따라 추가, 검색 API 응답에서 파싱)
 4. `CHILD_AUTH_SECRET`은 `openssl rand -hex 32`로 생성
 
 ### Azure 셋업
@@ -130,6 +131,8 @@ src/
     siblingReadingCounts.ts  형제자매 비교용 집계 전용 조회(서비스 역할)
     avatarPhoto.ts        아바타 사진 경로 규칙 + 서명된 URL 발급
     bookSearch.ts / libraryBook.ts  도서 검색 다중 소스 조회 + 중복 제거
+    isbn.ts                검색 API의 ISBN 필드 파싱 + 사람이 직접 입력한 ISBN 형식 검증
+                           (생기부 독서활동상황란은 ISBN 등재 도서에 한해 기재 가능)
     externalBookSearch.ts  네이버쇼핑 검색 링크 생성(페이지 수 등 자동 조회 안 되는 정보를
                            사람이 직접 찾아보게 하는 도우미 — 서버가 대신 긁어오지 않음)
     recordsPaging.ts      기록 목록 페이지 크기(서버/클라이언트 공용 모듈 — "use client" 금지)

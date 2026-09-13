@@ -8,6 +8,7 @@ function candidate(overrides: Partial<BookCandidate> = {}): BookCandidate {
     author: "마르쿠스 피스터",
     thumbnail: null,
     description: null,
+    isbn: null,
     ...overrides,
   };
 }

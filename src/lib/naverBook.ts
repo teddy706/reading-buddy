@@ -1,11 +1,13 @@
 import "server-only";
 import type { BookCandidate } from "@/lib/kakaoBook";
+import { pickIsbnFromApiField } from "@/lib/isbn";
 
 interface NaverBookItem {
   title: string;
   author: string;
   description: string;
   image: string;
+  isbn: string;
 }
 
 // 네이버 검색 결과는 일치한 부분에 <b> 태그를 감싸서 돌려준다 — 화면에 그대로 보여줄 거라 걷어낸다.
@@ -41,6 +43,7 @@ export async function searchNaverBooks(query: string, size = 5): Promise<BookCan
       author: item.author ? firstAuthor(item.author) : null,
       thumbnail: item.image || null,
       description: item.description ? stripHtml(item.description).slice(0, 200) : null,
+      isbn: pickIsbnFromApiField(item.isbn),
     }));
   } catch {
     return [];

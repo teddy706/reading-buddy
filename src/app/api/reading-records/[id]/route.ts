@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/currentProfile";
+import { normalizeIsbnInput } from "@/lib/isbn";
 import type { DokseoroStatus } from "@/lib/types";
 
 const DOKSEORO_STATUSES: DokseoroStatus[] = ["pending", "synced", "failed"];
@@ -16,7 +17,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (!profile) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
 
   const supabase = createClient();
-  const { bookTitle, content, recordedDate, dokseoroStatus, pageCount } = await request.json();
+  const { bookTitle, content, recordedDate, dokseoroStatus, pageCount, isbn } = await request.json();
 
   if (dokseoroStatus !== undefined && profile.role !== "parent") {
     return NextResponse.json({ error: "'독서로' 등록 상태는 부모만 바꿀 수 있어요." }, { status: 403 });
@@ -26,6 +27,12 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (pageCount !== undefined && (typeof pageCount !== "number" || !Number.isInteger(pageCount) || pageCount <= 0)) {
     return NextResponse.json({ error: "페이지 수는 1 이상의 숫자여야 해요." }, { status: 400 });
   }
+  // ISBN도 마찬가지로 서버에서 다시 정규화·검증한다(생기부 독서활동 등재에는 ISBN에 등재된
+  // 도서만 가능하다는 교육부 지침 참고 — CLAUDE.md).
+  const normalizedIsbn = typeof isbn === "string" && isbn.trim() ? normalizeIsbnInput(isbn) : undefined;
+  if (typeof isbn === "string" && isbn.trim() && !normalizedIsbn) {
+    return NextResponse.json({ error: "ISBN은 10자리 또는 13자리 숫자여야 해요." }, { status: 400 });
+  }
 
   const update: {
     book_title?: string;
@@ -33,12 +40,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     recorded_at?: string;
     dokseoro_status?: DokseoroStatus;
     page_count?: number;
+    isbn?: string;
   } = {};
   if (typeof bookTitle === "string" && bookTitle.trim()) update.book_title = bookTitle.trim();
   if (typeof content === "string" && content.trim()) update.content = content.trim();
   if (typeof recordedDate === "string" && recordedDate) update.recorded_at = recordedDate;
   if (DOKSEORO_STATUSES.includes(dokseoroStatus)) update.dokseoro_status = dokseoroStatus;
   if (typeof pageCount === "number") update.page_count = pageCount;
+  if (normalizedIsbn) update.isbn = normalizedIsbn;
 
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: "변경할 내용이 없어요." }, { status: 400 });
