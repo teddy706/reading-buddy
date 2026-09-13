@@ -55,6 +55,11 @@ export default async function StatsPage() {
   });
 
   const maxCount = Math.max(1, ...perChildMonthly.flatMap((c) => c.counts));
+  // 막대 폭을 자녀 수에 맞춰 줄인다 — 고정 폭(예: 12px)이면 자녀가 3명 이상일 때 6개월 x
+  // 자녀 수만큼의 막대가 카드 폭보다 넓어져 모바일에서 오른쪽으로 넘쳐흘렀다(사용자 피드백:
+  // "독서량 추이 그래프가 밖으로 빠져나와"). 자녀가 많을수록 막대를 가늘게 만들어 6개월 x
+  // 자녀 수 막대가 항상 카드 안에 들어오게 한다.
+  const barWidthPx = perChildMonthly.length <= 2 ? 12 : perChildMonthly.length === 3 ? 9 : 7;
 
   const sourceCounts: Record<RecordSourceType, number> = { conversation: 0, ocr: 0, manual: 0 };
   const dokseoroCounts: Record<DokseoroStatus, number> = { pending: 0, synced: 0, failed: 0 };
@@ -98,26 +103,31 @@ export default async function StatsPage() {
 
           <div className="card">
             <p className="mb-4 font-bold">최근 6개월 독서량 추이</p>
-            <div className="flex items-end justify-between gap-2" style={{ height: 120 }}>
-              {months.map((m, mi) => (
-                <div key={m.key} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
-                  <div className="flex h-full items-end gap-1">
-                    {perChildMonthly.map(({ counts }, ci) => {
-                      const count = counts[mi];
-                      const heightPct = Math.max(4, (count / maxCount) * 100);
-                      return (
-                        <div
-                          key={ci}
-                          className={`w-3 rounded-t-md ${CHILD_BAR_COLOR[ci % CHILD_BAR_COLOR.length]}`}
-                          style={{ height: `${heightPct}%` }}
-                          title={`${count}권`}
-                        />
-                      );
-                    })}
+            {/* overflow-x-auto: 막대 폭을 자녀 수에 맞춰 줄여도 혹시 더 좁은 화면이나 더 많은
+                자녀 수에서 여전히 안 들어맞을 때, 페이지 전체가 옆으로 밀리는 대신 이 차트
+                영역 안에서만 스크롤되게 하는 안전장치. */}
+            <div className="overflow-x-auto">
+              <div className="flex items-end justify-between gap-2" style={{ height: 120 }}>
+                {months.map((m, mi) => (
+                  <div key={m.key} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1">
+                    <div className="flex h-full items-end gap-1">
+                      {perChildMonthly.map(({ counts }, ci) => {
+                        const count = counts[mi];
+                        const heightPct = Math.max(4, (count / maxCount) * 100);
+                        return (
+                          <div
+                            key={ci}
+                            className={`shrink-0 rounded-t-md ${CHILD_BAR_COLOR[ci % CHILD_BAR_COLOR.length]}`}
+                            style={{ width: barWidthPx, height: `${heightPct}%` }}
+                            title={`${count}권`}
+                          />
+                        );
+                      })}
+                    </div>
+                    <span className="text-[11px] text-soft">{m.label}</span>
                   </div>
-                  <span className="text-[11px] text-soft">{m.label}</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
             <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1.5">
               {perChildMonthly.map(({ child }, i) => (
