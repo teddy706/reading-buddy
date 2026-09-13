@@ -178,7 +178,9 @@ export function ChildEditCard({ child, photoUrl }: { child: Profile; photoUrl: s
           onChange={(e) => setName(e.target.value)}
           onBlur={() => name.trim() && name !== child.name && saveProfile({ name })}
           disabled={savingProfile}
-          className="input mb-0 flex-1"
+          // min-w-0: 옆의 고정폭 아바타 버튼과 함께 flex 행에 있는데, input의 기본 최소
+          // 너비(auto)가 좁은 화면에서 줄어드는 걸 막을 수 있어서 명시적으로 풀어준다.
+          className="input mb-0 min-w-0 flex-1"
         />
       </div>
 

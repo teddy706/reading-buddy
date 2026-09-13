@@ -135,20 +135,23 @@ export function RecordsBrowser({
           placeholder="책 제목이나 내용으로 검색"
           className="input md:mb-2.5 md:flex-1"
         />
+        {/* min-w-0 + flex-1: 네이티브 date input이 자기 고유 폭(달력 아이콘 포함) 밑으로
+            안 줄어들려는 걸 풀어줘서, 가장 좁은 폰(320px대)에서도 둘이 나란히 카드 폭
+            안에 들어오게 한다(통계 그래프에서 고친 것과 같은 flexbox 함정). */}
         <div className="mb-2.5 flex gap-2 md:mb-2.5 md:shrink-0">
           <input
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
             aria-label="시작일"
-            className="input mb-0"
+            className="input mb-0 min-w-0 flex-1"
           />
           <input
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             aria-label="종료일"
-            className="input mb-0"
+            className="input mb-0 min-w-0 flex-1"
           />
         </div>
       </div>

@@ -191,7 +191,10 @@ export function ChatSession({ session }: { session: ConversationSession }) {
           onChange={(e) => setInput(e.target.value)}
           placeholder="여기에 답을 써줘"
           rows={2}
-          className="input mb-0 flex-1"
+          // min-w-0: textarea/input은 flex 아이템일 때 기본 최소 너비가 "auto"라 내용물
+          // 고유 크기(기본 폭) 밑으로는 안 줄어들어, 옆의 고정폭 버튼들과 합쳐 좁은 화면에서
+          // 넘칠 수 있다 — 방금 고친 통계 그래프와 같은 종류의 flexbox 함정이라 같이 정리함.
+          className="input mb-0 min-w-0 flex-1"
         />
         <button
           type="button"
