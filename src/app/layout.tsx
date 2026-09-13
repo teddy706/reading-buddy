@@ -14,7 +14,7 @@ const pretendard = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "도란도란 - 대화로 남기는 독서 기록",
+  title: "리딩버디 - 대화로 남기는 독서 기록",
   description: "아이와의 대화와 사진으로 남기는 가족용 독서 기록 PWA",
   manifest: "/manifest.json",
   icons: {

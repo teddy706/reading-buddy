@@ -40,13 +40,13 @@ export default function LoginPage() {
         <div className="mb-6 flex flex-col items-center">
           <Image
             src="/icons/icon-192x192.png"
-            alt="도란도란 로고"
+            alt="리딩버디 로고"
             width={64}
             height={64}
             className="h-16 w-16 rounded-[18px] shadow-sm mb-2"
             priority
           />
-          <h1 className="text-2xl font-bold">도란도란</h1>
+          <h1 className="text-2xl font-bold">리딩버디</h1>
           <p className="mt-1 text-center text-sm text-soft">부모 계정으로 로그인해요</p>
         </div>
 
