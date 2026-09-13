@@ -303,8 +303,8 @@ PRD 4.2 "MVP 이후 로드맵" 후보 중 사용자가 명시적으로 아래 4�
 
 **찾은 것: ISBN을 전혀 캡처하지 않고 있었다.** 카카오/도서관정보나루/네이버 도서 검색 API 셋 다 응답에 ISBN을 이미 포함하고 있는데(각각 `isbn`, `isbn13`, `isbn` 필드), `BookCandidate` 타입에 그 필드를 아예 안 받고 있어서 버려지고 있었다 — 새 API 연동 없이 파싱만 추가하면 되는 상황이라 바로 구현함(0010 페이지 수 추가와 정확히 같은 패턴):
 
-- `src/lib/isbn.ts` 신규: `pickIsbnFromApiField`(카카오/네이버가 "ISBN10 ISBN13"처럼 공백으로 섞어 주는 값에서 13자리를 우선 추출), `normalizeIsbnInput`(부모가 직접 입력한 값의 하이픈 정리 + 10/13자리 형식 검증, 체크섬까지는 안 봄). 유닛 테스트 8개.
-- `conversation_sessions.book_isbn`/`reading_records.isbn`(`0011_book_isbn.sql`) 추가 — 대화 시작 시 담아뒀다가 감상문 저장 시 복사되는 흐름도 페이지 수와 동일.
+- `src/lib/isbn.ts` 신규: `pickIsbnFromApiField`(카카오/네이버가 "ISBN10 ISBN13"처럼 공백으로 섞어 주는 값에서 13자리를 우선 추출), `normalizeIsbnInput`(부모가 직접 입력한 값의 하이픈 정리 + 10/13자리 형식 검증, 체크섬까지는 안 봄). 유닛 테스트 9개.
+- `conversation_sessions.book_isbn`/`reading_records.isbn`(`0011_book_isbn.sql`) 추가 — 대화 시작 시 담아뒀다가 감상문 저장 시 복사되는 흐름도 페이지 수와 동일. **실제 Supabase 프로젝트에 적용 완료**(사용자가 SQL Editor에서 직접 실행).
 - `NewBookForm.tsx`: 검색 후보를 고르면 자동으로 ISBN이 채워지고(찾았으면 "✅ ISBN 확인됨" 안내), 그 후 제목을 손으로 고치면 엉뚱한 책에 ISBN이 붙지 않도록 비운다. 직접 타이핑만 한 경우는 ISBN 없이 진행 가능(강제하지 않음 — 대부분의 책은 검색으로 찾아지고, 못 찾은 소수 사례까지 막으면 기록 자체를 못 남기게 됨).
 - `RecordDetail.tsx`: ISBN 필드를 페이지 수와 똑같은 패턴으로 추가(선택 입력, 비어 있어도 저장 가능, 값이 있으면 형식 검증, 네이버쇼핑 "찾아보기" 링크, "독서로 등록하기" 복사 텍스트에 포함) — 자동으로 못 채운 기록(직접 입력·OCR)도 부모가 나중에 채워 넣을 수 있다.
 - OCR 검수 화면(`OcrReview.tsx`)에는 굳이 추가하지 않음 — 종이 독서노트에서 ISBN을 읽어낼 방법이 없고, 어차피 `RecordDetail`에서 사후에 채울 수 있어 중복 UI가 불필요하다고 판단.
