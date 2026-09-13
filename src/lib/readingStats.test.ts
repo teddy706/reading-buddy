@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countByMonth, lastNMonths } from "@/lib/readingStats";
+import { countByMonth, countByYear, currentYearKey, lastNMonths } from "@/lib/readingStats";
 import type { ReadingRecord } from "@/lib/types";
 
 function record(recordedAt: string): ReadingRecord {
@@ -10,6 +10,7 @@ function record(recordedAt: string): ReadingRecord {
     book_title: "책",
     book_author: null,
     page_count: null,
+    isbn: null,
     source_type: "manual",
     content: "내용",
     source_ref_id: null,
@@ -44,5 +45,22 @@ describe("countByMonth", () => {
 
   it("일치하는 기록이 없으면 0을 반환한다", () => {
     expect(countByMonth([record("2026-01-01")], "2026-09")).toBe(0);
+  });
+});
+
+describe("currentYearKey", () => {
+  it("주어진 날짜의 연도를 문자열로 반환한다", () => {
+    expect(currentYearKey(new Date(2026, 8, 15))).toBe("2026");
+  });
+});
+
+describe("countByYear", () => {
+  it("recorded_at의 연도가 일치하는 기록만 센다", () => {
+    const records = [record("2026-01-01"), record("2026-12-31"), record("2025-12-31"), record("2027-01-01")];
+    expect(countByYear(records, "2026")).toBe(2);
+  });
+
+  it("일치하는 기록이 없으면 0을 반환한다", () => {
+    expect(countByYear([record("2025-01-01")], "2026")).toBe(0);
   });
 });

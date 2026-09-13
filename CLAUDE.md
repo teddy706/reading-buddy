@@ -314,6 +314,27 @@ PRD 4.2 "MVP 이후 로드맵" 후보 중 사용자가 명시적으로 아래 4�
 - **학기 단위 필터/내보내기**: "학기 단위로 입력"이라는 조건이 있지만, 기존 기록 검색 화면(`/records`, `/settings/records`)에 이미 날짜 범위 필터가 있어서 학기 구간(3~8월/9~2월)을 그걸로 걸러볼 수 있다 — 별도 "학기" 개념을 새로 만들 만큼 아쉬운 지점은 아니라고 판단, 필요해지면 나중에.
 - **감상문을 세특/창의적 체험활동용으로 더 길게/다른 형식으로 뽑는 기능**: 현재 3단 구성 감상문이 이미 "독서로에 등록"용으로 잘 맞게 설계돼 있고, 세특 활용은 결국 담임 교사·학생이 직접 재구성하는 영역이라 앱이 대신 써주는 건 범위 밖으로 판단 — 사용자가 명시적으로 원하면 재검토.
 
+## 배지에 "연간 100권 독서 챌린지" 추가 (2026-09-13)
+
+사용자 요청: "내 배지를 더 추가하자. 1년에 책을 100권이상 읽어서 배지를 얻는데 챌린지가 계속되면 좋겠어" — 한 번 얻으면 끝나는 배지가 아니라, 해가 바뀔 때마다 다시 도전할 수 있는 반복형 챌린지를 원한다는 취지로 이해함.
+
+- 기존 `BADGE_CATALOG`의 7종 배지는 전부 "누적 기록 기반이라 한 번 얻으면 계속 유지"되는 성격이라(`badges.ts` 상단 주석 참고), 이 고정 목록에 "100권" 항목 하나를 추가하는 방식으로는 "매년 다시 도전"이라는 요구를 표현할 수 없었다 — 그래서 별도 개념으로 분리함.
+- `src/lib/badges.ts`에 `computeYearlyChallenges(childRecords, currentYearKey)` 추가 — `reading_records.recorded_at`의 연도별로 권수를 세어 `{ year, count, target: 100, earned }` 목록을 최신 연도 순으로 반환한다. 배지와 마찬가지로 새 테이블 없이 매번 즉석 계산. 올해(currentYearKey)는 기록이 0건이어도 항상 포함시켜 "지금 진행 중인 챌린지"를 보여주고, 그 외 연도는 기록이 1건 이상 있는 해만 나열(아직 활동하지 않은 과거 연도를 빈 챌린지로 나열하지 않기 위함).
+- `src/lib/readingStats.ts`에 `currentYearKey()`/`countByYear()` 추가 — 기존 `lastNMonths`/`countByMonth`와 같은 패턴.
+- `src/components/YearlyChallengeList.tsx` 신규 — 배지 그리드와 다르게 목표치(100권)까지의 진행률이 의미 있는 정보라 프로그레스 바가 있는 카드 목록으로 표현(달성 시 🏅 + 세이지 그린 바, 진행 중이면 📅 + 오렌지 바).
+- 자녀 홈(`/home`)의 "내 배지" 섹션 바로 아래에 "연간 독서 챌린지" 섹션을 추가, 부모 비교 화면(`/settings/badges`)에도 자녀별 배지 그리드 아래 같은 목록을 추가해 형제자매 비교가 가능하게 함.
+- 유닛 테스트 추가: `computeYearlyChallenges` 4개(`badges.test.ts`), `currentYearKey`/`countByYear` 3개(`readingStats.test.ts`) — 전체 테스트 수 73개.
+- **부수적으로 발견해 고침**: `badges.test.ts`/`readingStats.test.ts`의 테스트용 `record()` 헬퍼가 최근 ISBN 마이그레이션(`isbn` 캡처 추가 절 참고)으로 `ReadingRecord` 타입에 필수 필드가 된 `isbn`을 채우지 않고 있어 `tsc --noEmit`이 이미 실패하던 상태였다(이 세션 이전부터 존재한 문제, `git stash`로 확인) — 두 헬퍼에 `isbn: null`을 추가해 타입체크를 통과하도록 함께 고쳤다.
+- 실제 Supabase 데이터로 직접 로그인해 브라우저로 확인하지는 않았음(100권을 실제로 채우는 시딩이 필요) — `npm run test`(73개 전부 통과), `npx tsc --noEmit`, `npm run build`(30개 라우트 정상 컴파일)로 검증함. 실제 화면에서 확인하려면 자녀 기록을 100건 이상 시딩하거나, 브라우저에서 직접 로그인해 `/home`·`/settings/badges`를 열어볼 것.
+
+## 연간 100권 챌린지 배지를 부모 통계 화면에도 반영 (2026-09-13)
+
+사용자 요청: "100권 달성 시 배지도 부모 통계 화면에 반영해줘" — 방금 추가한 연간 챌린지가 `/home`(자녀)과 `/settings/badges`(부모, 배지 비교)에는 반영됐지만, 부모가 가장 먼저 보는 `/settings/stats`(독서 통계) 상단의 자녀별 요약 카드(누적 권수/이번 달 권수)에는 빠져 있었다.
+
+- `src/app/settings/stats/page.tsx`: 자녀별 `perChildMonthly` 계산에 `computeYearlyChallenges(childRecords, thisYearKey)`로 올해 챌린지를 함께 구해 상단 요약 카드에 표시 — 100권 달성 시 카드 테두리를 세이지 그린(`border-a`)으로 강조하고 "🏅 {연도}년 100권 달성"을, 미달성이면 "연간 N/100권" 진행률을 보여준다.
+- 별도 API 호출 없이 이미 로드된 `readingRecords`로 클라이언트에서 계산(다른 통계 지표들과 동일한 패턴).
+- `npx tsc --noEmit`, `npm run test`(73개 전부 통과), `npm run build`(30개 라우트 정상 컴파일)로 검증. 실제 100권 데이터로 브라우저 확인은 하지 않음 — 시딩 후 확인 필요.
+
 ## 참고 문서
 
 - [docs/PRD.md](docs/PRD.md) — 전체 PRD (v1.9)

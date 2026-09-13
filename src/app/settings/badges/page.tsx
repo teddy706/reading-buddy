@@ -3,8 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
 import { BackLink } from "@/components/BackLink";
 import { BadgeGrid } from "@/components/BadgeGrid";
-import { computeBadges } from "@/lib/badges";
-import { lastNMonths, countByMonth } from "@/lib/readingStats";
+import { YearlyChallengeList } from "@/components/YearlyChallengeList";
+import { computeBadges, computeYearlyChallenges } from "@/lib/badges";
+import { lastNMonths, countByMonth, currentYearKey } from "@/lib/readingStats";
 import { getAvatarPhotoUrls } from "@/lib/avatarPhoto";
 import type { Profile, ReadingRecord } from "@/lib/types";
 
@@ -45,6 +46,7 @@ export default async function BadgesPage() {
     return {
       child,
       badges: computeBadges(myRecords, siblingsThisMonthCounts, thisMonthKey),
+      yearlyChallenges: computeYearlyChallenges(myRecords, currentYearKey()),
     };
   });
 
@@ -59,7 +61,7 @@ export default async function BadgesPage() {
         // lg부터 자녀 카드를 나란히 2열로 — "비교"가 목적인 화면이라 넓은 화면에서는 옆으로
         // 붙여 보여주는 쪽이 스크롤 없이 비교하기 더 쉽다.
         <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
-          {perChild.map(({ child, badges }) => {
+          {perChild.map(({ child, badges, yearlyChallenges }) => {
             const earnedCount = badges.filter((b) => b.earned).length;
             return (
               <div key={child.id} className="card">
@@ -73,6 +75,8 @@ export default async function BadgesPage() {
                   <span className="text-sm text-soft">· {earnedCount}/{badges.length}개 획득</span>
                 </div>
                 <BadgeGrid badges={badges} />
+                <p className="mb-2 mt-4 text-sm font-bold">연간 독서 챌린지</p>
+                <YearlyChallengeList challenges={yearlyChallenges} />
               </div>
             );
           })}

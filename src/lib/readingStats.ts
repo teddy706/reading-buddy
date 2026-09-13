@@ -19,3 +19,12 @@ export function lastNMonths(n: number, from: Date = new Date()): MonthBucket[] {
 export function countByMonth(records: ReadingRecord[], monthKey: string): number {
   return records.filter((r) => r.recorded_at.slice(0, 7) === monthKey).length;
 }
+
+// "YYYY" — 연간 독서 챌린지(badges.ts의 computeYearlyChallenges)의 기준 연도로 사용.
+export function currentYearKey(from: Date = new Date()): string {
+  return String(from.getFullYear());
+}
+
+export function countByYear(records: ReadingRecord[], yearKey: string): number {
+  return records.filter((r) => r.recorded_at.slice(0, 4) === yearKey).length;
+}

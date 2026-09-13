@@ -2,7 +2,8 @@ import { requireParentProfile } from "@/lib/currentProfile";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
 import { BackLink } from "@/components/BackLink";
-import { lastNMonths, countByMonth } from "@/lib/readingStats";
+import { lastNMonths, countByMonth, currentYearKey } from "@/lib/readingStats";
+import { computeYearlyChallenges } from "@/lib/badges";
 import { getAvatarPhotoUrls } from "@/lib/avatarPhoto";
 import type { Profile, ReadingRecord, RecordSourceType, DokseoroStatus } from "@/lib/types";
 
@@ -44,13 +45,17 @@ export default async function StatsPage() {
   const months = lastNMonths(6);
   const currentMonthKey = months[months.length - 1].key;
 
+  const thisYearKey = currentYearKey();
   const perChildMonthly = childProfiles.map((child) => {
     const childRecords = readingRecords.filter((r) => r.child_profile_id === child.id);
+    // computeYearlyChallenges는 currentYearKey를 항상 포함시켜 반환하므로 find가 항상 값을 찾는다.
+    const yearlyChallenge = computeYearlyChallenges(childRecords, thisYearKey).find((c) => c.year === thisYearKey)!;
     return {
       child,
       counts: months.map((m) => countByMonth(childRecords, m.key)),
       total: childRecords.length,
       thisMonth: countByMonth(childRecords, currentMonthKey),
+      yearlyChallenge,
     };
   });
 
@@ -82,8 +87,11 @@ export default async function StatsPage() {
             className="mb-3.5 grid gap-3"
             style={{ gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))" }}
           >
-            {perChildMonthly.map(({ child, total, thisMonth }) => (
-              <div key={child.id} className="card mb-0 p-3 text-center">
+            {perChildMonthly.map(({ child, total, thisMonth, yearlyChallenge }) => (
+              <div
+                key={child.id}
+                className={`card mb-0 p-3 text-center ${yearlyChallenge.earned ? "border-a" : ""}`}
+              >
                 <div className="mb-2 flex flex-col items-center gap-1">
                   <Avatar
                     emoji={child.avatar}
@@ -97,6 +105,15 @@ export default async function StatsPage() {
                   <span className="text-base font-normal text-soft">권</span>
                 </p>
                 <p className="whitespace-nowrap text-xs text-soft">이번 달 {thisMonth}권</p>
+                {yearlyChallenge.earned ? (
+                  <p className="mt-1 whitespace-nowrap text-xs font-bold text-a">
+                    🏅 {yearlyChallenge.year}년 100권 달성
+                  </p>
+                ) : (
+                  <p className="mt-1 whitespace-nowrap text-[11px] text-soft">
+                    연간 {yearlyChallenge.count}/{yearlyChallenge.target}권
+                  </p>
+                )}
               </div>
             ))}
           </div>

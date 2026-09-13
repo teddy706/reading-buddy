@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BADGE_CATALOG, computeBadges } from "@/lib/badges";
+import { BADGE_CATALOG, computeBadges, computeYearlyChallenges, YEARLY_CHALLENGE_TARGET } from "@/lib/badges";
 import type { ReadingRecord } from "@/lib/types";
 
 function record(overrides: Partial<ReadingRecord> = {}): ReadingRecord {
@@ -10,6 +10,7 @@ function record(overrides: Partial<ReadingRecord> = {}): ReadingRecord {
     book_title: "책",
     book_author: null,
     page_count: null,
+    isbn: null,
     source_type: "manual",
     content: "내용",
     source_ref_id: null,
@@ -94,5 +95,43 @@ describe("computeBadges", () => {
       const badges = computeBadges(records, [0], "2026-09");
       expect(badges.find((b) => b.badge.id === "monthly-champion")?.progressText).toBe("이번 달 1권");
     });
+  });
+});
+
+describe("computeYearlyChallenges", () => {
+  it("기록이 하나도 없어도 올해 챌린지는 0권 진행 중으로 포함한다", () => {
+    const challenges = computeYearlyChallenges([], "2026");
+    expect(challenges).toEqual([{ year: "2026", count: 0, target: YEARLY_CHALLENGE_TARGET, earned: false }]);
+  });
+
+  it("연도별로 권수를 세고 목표(100권) 달성 여부를 판정한다", () => {
+    const records = [
+      ...Array.from({ length: 100 }, () => record({ recorded_at: "2025-05-01" })),
+      ...Array.from({ length: 42 }, () => record({ recorded_at: "2026-03-01" })),
+    ];
+    const challenges = computeYearlyChallenges(records, "2026");
+    expect(challenges.find((c) => c.year === "2025")).toEqual({
+      year: "2025",
+      count: 100,
+      target: YEARLY_CHALLENGE_TARGET,
+      earned: true,
+    });
+    expect(challenges.find((c) => c.year === "2026")).toEqual({
+      year: "2026",
+      count: 42,
+      target: YEARLY_CHALLENGE_TARGET,
+      earned: false,
+    });
+  });
+
+  it("최신 연도가 먼저 오도록 내림차순 정렬한다", () => {
+    const records = [record({ recorded_at: "2024-01-01" }), record({ recorded_at: "2025-01-01" })];
+    const challenges = computeYearlyChallenges(records, "2026");
+    expect(challenges.map((c) => c.year)).toEqual(["2026", "2025", "2024"]);
+  });
+
+  it("기록이 없는 과거 연도는 목록에 넣지 않는다(활동하지 않은 해까지 빈 챌린지로 나열하지 않음)", () => {
+    const challenges = computeYearlyChallenges([record({ recorded_at: "2026-01-01" })], "2026");
+    expect(challenges).toHaveLength(1);
   });
 });

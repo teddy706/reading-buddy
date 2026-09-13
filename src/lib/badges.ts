@@ -83,3 +83,36 @@ export function computeBadges(
   const catalog = hasSiblings ? BADGE_CATALOG : BADGE_CATALOG.filter((b) => b.id !== "monthly-champion");
   return catalog.map((badge) => progressByBadgeId[badge.id]);
 }
+
+// 연간 독서 챌린지: "1년에 100권"처럼 해가 바뀔 때마다 새로 도전할 수 있는 배지.
+// 다른 배지는 한 번 얻으면 계속 유지되는 누적 기록이지만, 이건 매년 리셋되는 챌린지라
+// BADGE_CATALOG(고정 목록)에 넣는 대신 "그동안의 연도별 결과 + 올해 진행 상황" 목록으로 반환한다.
+export const YEARLY_CHALLENGE_TARGET = 100;
+
+export interface YearlyChallenge {
+  year: string; // "YYYY"
+  count: number;
+  target: number;
+  earned: boolean;
+}
+
+// currentYearKey는 항상 목록에 포함(그해 기록이 0건이어도 "올해의 챌린지"를 보여주기 위함).
+// 그 외의 연도는 기록이 1건 이상 있는 해만 포함 — 아이가 아직 활동하지 않은 과거 연도를
+// 빈 챌린지로 나열할 필요는 없다고 판단. 최신 연도가 먼저 오도록 내림차순 정렬.
+export function computeYearlyChallenges(childRecords: ReadingRecord[], currentYearKey: string): YearlyChallenge[] {
+  const countByYear = new Map<string, number>();
+  for (const r of childRecords) {
+    const year = r.recorded_at.slice(0, 4);
+    countByYear.set(year, (countByYear.get(year) ?? 0) + 1);
+  }
+  if (!countByYear.has(currentYearKey)) countByYear.set(currentYearKey, 0);
+
+  return Array.from(countByYear.entries())
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([year, count]) => ({
+      year,
+      count,
+      target: YEARLY_CHALLENGE_TARGET,
+      earned: count >= YEARLY_CHALLENGE_TARGET,
+    }));
+}

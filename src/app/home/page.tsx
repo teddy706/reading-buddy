@@ -5,9 +5,10 @@ import { Avatar } from "@/components/Avatar";
 import { LogoutButton } from "@/components/LogoutButton";
 import { RecordCard } from "@/components/RecordCard";
 import { BadgeGrid } from "@/components/BadgeGrid";
-import { computeBadges } from "@/lib/badges";
+import { YearlyChallengeList } from "@/components/YearlyChallengeList";
+import { computeBadges, computeYearlyChallenges } from "@/lib/badges";
 import { getSiblingsThisMonthCounts } from "@/lib/siblingReadingCounts";
-import { lastNMonths } from "@/lib/readingStats";
+import { lastNMonths, currentYearKey } from "@/lib/readingStats";
 import { getAvatarPhotoUrl } from "@/lib/avatarPhoto";
 import type { ConversationSession, Profile, ReadingRecord } from "@/lib/types";
 
@@ -49,6 +50,7 @@ export default async function HomePage() {
     thisMonthKey
   );
   const badges = computeBadges(myRecords, siblingsThisMonthCounts, thisMonthKey);
+  const yearlyChallenges = computeYearlyChallenges(myRecords, currentYearKey());
 
   return (
     <div className="app-shell">
@@ -75,6 +77,11 @@ export default async function HomePage() {
       <p className="mb-2 font-bold">내 배지</p>
       <div className="card">
         <BadgeGrid badges={badges} />
+      </div>
+
+      <p className="mb-2 font-bold">연간 독서 챌린지</p>
+      <div className="card">
+        <YearlyChallengeList challenges={yearlyChallenges} />
       </div>
 
       <div className="mb-2 flex items-center justify-between">
