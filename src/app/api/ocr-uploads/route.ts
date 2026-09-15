@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireChildProfileForApi } from "@/lib/currentProfile";
 import { analyzeImage } from "@/lib/documentIntelligence";
 import { parseOcrRecord } from "@/lib/azureOpenAI";
+import { demoBlockResponse } from "@/lib/demoMode";
 
 // 클라이언트가 'reading-notes' 버킷에 사진을 먼저 올린 뒤, 그 경로로 이 라우트를 호출한다.
 // OCR 인식이 실패해도(손글씨를 못 읽거나 서비스 오류) 에러를 던지지 않고 status: 'failed'로
@@ -11,6 +12,8 @@ import { parseOcrRecord } from "@/lib/azureOpenAI";
 export async function POST(request: Request) {
   const profile = await requireChildProfileForApi();
   if (profile instanceof NextResponse) return profile;
+  const demoBlock = await demoBlockResponse(profile, "데모 체험 계정에서는 독서노트 사진 기록을 체험할 수 없어요.");
+  if (demoBlock) return demoBlock;
 
   const { imagePath } = await request.json();
   if (typeof imagePath !== "string" || !imagePath) {

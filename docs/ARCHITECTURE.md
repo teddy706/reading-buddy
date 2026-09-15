@@ -156,6 +156,14 @@ test/stubs/server-only.ts       # vitest에서 server-only 모듈 우회용 스�
 - **프로비저닝(가족/계정 생성, 자녀 삭제 등)은 전부 서버(`SUPABASE_SERVICE_ROLE_KEY`)에서 RLS를 우회**해 처리한다. 이 키는 브라우저로 내려가지 않는다.
 - **역할별 필드 제한은 RLS로 표현할 수 없다** — 예: "행 자체는 부모가 수정 가능하지만 `dokseoro_status` 필드만은 부모 전용"인 경우, RLS는 행 단위 접근만 가르므로 API 라우트 코드가 직접 `profile.role !== 'parent'`를 검사해 403을 반환한다(`/api/reading-records/[id]` PATCH).
 
+### 4.5 데모 체험 계정 (읽기 전용)
+
+`/signup`의 "데모 체험하기"가 로그인시키는 계정은 **진짜 계정**이다 — 별도 mock 데이터나 전용 화면 없이, `families.is_demo`(`0012`) 플래그 하나로 기존 화면/RLS를 그대로 재사용한다.
+
+- 쓰기 차단은 RLS가 아니라 **API 라우트 레벨**에서 한다(`src/lib/demoMode.ts`의 `isDemoFamily`/`demoBlockResponse`) — RLS는 "누구 데이터인가"만 가리지, "이 가족은 쓰기가 금지된 데모인가"는 애초에 표현 대상이 아니기 때문에 4.3의 역할 가드와 같은 자리(라우트 최상단)에 한 줄 추가하는 방식으로 구현.
+- 예외: 대화 질문/감상문 생성(`next-question`/`essay`)은 데모에서도 실제 Azure 호출을 허용 — 대신 최종 저장(`reading-sessions/[id]/finish`)만 데모 가족이면 `reading_records` insert를 건너뛰고 세션을 정리한다. "어디까지 진짜로 동작하게 둘지"를 라우트 단위가 아니라 **같은 기능 흐름 안의 단계 단위**로 나눈 유일한 예외.
+- 데이터는 `scripts/seed-demo-account.mjs`(멱등 — 실행할 때마다 기존 데모 가족을 지우고 새로 만듦)로 시딩. `families.is_demo`가 실제 가족과 데모 가족을 가르는 유일한 경계라, 실제 가족 데이터를 건드릴 위험 없이 반복 실행할 수 있다.
+
 ---
 
 ## 5. 데이터 모델
@@ -164,7 +172,7 @@ test/stubs/server-only.ts       # vitest에서 server-only 모듈 우회용 스�
 
 | 테이블 | 주요 컬럼 | 비고 |
 |---|---|---|
-| `families` | `id`, `name`, `join_code`(unique), `custom_stage_instructions`(jsonb, nullable) | 자녀 로그인 시 "어느 가족인지" 특정하는 데 `join_code` 사용. AI 질문 코치 커스터마이즈 값 보관(`0009`) |
+| `families` | `id`, `name`, `join_code`(unique), `custom_stage_instructions`(jsonb, nullable), `is_demo`(boolean, 기본 false, `0012`) | 자녀 로그인 시 "어느 가족인지" 특정하는 데 `join_code` 사용. AI 질문 코치 커스터마이즈 값 보관(`0009`). `is_demo`는 회원가입 화면의 데모 체험 계정 여부(4.5) |
 | `profiles` | `id`, `family_id`, `user_id`(→auth.users, unique), `role`(parent/child), `name`, `avatar`(기본 이모지), `avatar_photo_path`(nullable, `0007`), `pin_hash`, `pin_fail_count`, `pin_locked_until`(`0005`) | 부모/자녀 모두 실제 `auth.users` row를 가짐 |
 | `conversation_sessions` | `id`, `family_id`, `child_profile_id`, `book_title`, `book_author`, `book_page_count`(nullable int, `0010`), `book_isbn`(nullable text, `0011`), `messages`(jsonb — role/content/created_at/**stage**/**isFollowUp**), `status`(in_progress/completed) | `stage` 필드로 각 질문이 몇 단계인지, `isFollowUp`으로 팔로업 질문인지 기록(둘 다 마이그레이션 없이 jsonb 확장). `book_page_count`는 사람이 직접 입력(도서 검색 API가 페이지 수를 제공하지 않음), `book_isbn`은 검색 후보를 고르면 자동으로 채워짐(카카오/도서관정보나루/네이버 응답에 이미 포함된 값을 파싱) |
 | `reading_records` | `id`, `family_id`, `child_profile_id`, `book_title`, `book_author`, `page_count`(nullable int, `0010`), `isbn`(nullable text, `0011`), `source_type`(conversation/ocr/manual), `content`, `source_ref_id`(다형 참조, **FK 제약 없음**), `recorded_at`, `dokseoro_status`(pending/synced/failed), `updated_at`(트리거 자동 갱신) | 최종 독서 기록. `page_count`/`isbn` 둘 다 대화 완료 시 `conversation_sessions`에서 복사되거나(대화 기록) 기록 상세에서 직접 입력(OCR/직접입력 기록) — AI가 값을 추측하지 않음. `isbn`은 생기부 독서활동상황란이 ISBN 등재 도서에 한해 기재 가능하다는 교육부 지침 때문에 추가(2026-09-13) |
@@ -193,8 +201,9 @@ test/stubs/server-only.ts       # vitest에서 server-only 모듈 우회용 스�
 | `0009_custom_stage_instructions.sql` | `families.custom_stage_instructions` |
 | `0010_page_count.sql` | `conversation_sessions.book_page_count`, `reading_records.page_count` — 책 페이지 수(사람이 직접 입력) |
 | `0011_book_isbn.sql` | `conversation_sessions.book_isbn`, `reading_records.isbn` — ISBN(검색 API 응답 파싱, 생기부 연계 대응) |
+| `0012_demo_family.sql` | `families.is_demo` — 데모 체험 계정 플래그(4.5) |
 
-> 이 프로젝트의 마이그레이션은 `supabase db push`가 아니라 **Supabase 대시보드 SQL Editor에서 번호 순서대로 수동 실행**하는 방식으로 적용해왔다. 새 마이그레이션을 추가하면 실제 프로젝트에도 직접 실행해야 반영된다.
+> 이 프로젝트의 마이그레이션은 `supabase db push`가 아니라 **Supabase 대시보드 SQL Editor에서 번호 순서대로 수동 실행**하는 방식으로 적용해왔다(`0012`부터는 Supabase MCP의 `apply_migration`으로 직접 적용하기도 함 — 결과는 동일, MCP가 연결돼 있으면 이 방법도 쓸 수 있다). 새 마이그레이션을 추가하면 실제 프로젝트에도 반영해야 한다.
 
 ---
 

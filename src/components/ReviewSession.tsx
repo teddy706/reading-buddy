@@ -34,6 +34,9 @@ export function ReviewSession({ session }: { session: ConversationSession }) {
   const [saving, setSaving] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 데모 계정은 대화/감상문 생성까지는 실제로 체험하지만, "저장"을 누르면 실제 기록을
+  // 남기는 대신 이 안내만 보여준다(finish 라우트가 demo:true로 응답).
+  const [demoDone, setDemoDone] = useState(false);
 
   useEffect(() => {
     generateEssay();
@@ -69,6 +72,10 @@ export function ReviewSession({ session }: { session: ConversationSession }) {
       });
       const resData = await res.json();
       if (!res.ok) throw new Error(resData.error ?? "저장하지 못했어요.");
+      if (resData.demo) {
+        setDemoDone(true);
+        return;
+      }
       router.push("/home");
       router.refresh();
     } catch (err) {
@@ -87,14 +94,29 @@ export function ReviewSession({ session }: { session: ConversationSession }) {
         <p className="mb-1 text-center text-xs text-soft">총 {session.book_page_count}쪽</p>
       )}
       <p className="mb-4 text-center text-sm text-soft">
-        {!generating && data && !confirmedRead
-          ? "내가 한 말이 어떻게 다듬어졌는지 읽어보자"
-          : "감상문을 확인하고 고쳐도 돼요"}
+        {demoDone
+          ? "수고했어요!"
+          : !generating && data && !confirmedRead
+            ? "내가 한 말이 어떻게 다듬어졌는지 읽어보자"
+            : "감상문을 확인하고 고쳐도 돼요"}
       </p>
 
       {generating && <div className="card text-center text-sm text-soft">감상문을 쓰는 중...</div>}
 
-      {!generating && data && !confirmedRead && (
+      {demoDone && (
+        <div className="card text-center">
+          <p className="mb-2 text-2xl">🎉</p>
+          <p className="mb-2 font-bold">데모 체험은 여기까지예요!</p>
+          <p className="mb-4 text-sm text-soft">
+            실제 계정에서는 지금 만든 감상문이 이렇게 저장되고, &apos;독서로&apos; 등록·배지·독서 통계에도 반영돼요.
+          </p>
+          <button type="button" onClick={() => router.push("/home")} className="btn btn-primary mb-0">
+            홈으로 돌아가기
+          </button>
+        </div>
+      )}
+
+      {!demoDone && !generating && data && !confirmedRead && (
         <>
           <div className="mb-3 flex flex-1 flex-col gap-3 overflow-y-auto">
             {STAGE_ORDER.map((stage, i) => (
@@ -119,7 +141,7 @@ export function ReviewSession({ session }: { session: ConversationSession }) {
         </>
       )}
 
-      {!generating && data && confirmedRead && (
+      {!demoDone && !generating && data && confirmedRead && (
         <>
           <textarea value={essay} onChange={(e) => setEssay(e.target.value)} rows={8} className="input" />
 

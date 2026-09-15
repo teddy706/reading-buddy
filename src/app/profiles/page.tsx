@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
 import { LogoutButton } from "@/components/LogoutButton";
 import { getAvatarPhotoUrls } from "@/lib/avatarPhoto";
+import { DEMO_CHILD_PIN, isDemoFamily } from "@/lib/demoMode";
 import type { Profile } from "@/lib/types";
 
 // Next.js 기본 fetch 캐시로 인한 Supabase 응답 재사용 방지 — src/app/records/page.tsx 참고.
@@ -13,12 +14,15 @@ export default async function ProfilesPage() {
   const parent = await requireParentProfile();
 
   const supabase = createClient();
-  const { data: children } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("family_id", parent.family_id)
-    .eq("role", "child")
-    .order("created_at", { ascending: true });
+  const [{ data: children }, isDemo] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("*")
+      .eq("family_id", parent.family_id)
+      .eq("role", "child")
+      .order("created_at", { ascending: true }),
+    isDemoFamily(parent.family_id, supabase),
+  ]);
 
   const childProfiles = (children ?? []) as Profile[];
   const photoUrls = await getAvatarPhotoUrls(
@@ -32,6 +36,12 @@ export default async function ProfilesPage() {
       <h1 className="mb-1 mt-1 text-center text-2xl font-bold">누가 쓸까요?</h1>
       <p className="mb-6 text-center text-sm text-soft">프로필을 골라주세요</p>
 
+      {isDemo && (
+        <div className="mb-4 rounded-2xl border-2 border-accent bg-accent/10 p-3 text-center text-sm font-semibold">
+          🎈 데모 체험 중이에요 — 아래 프로필을 선택하고 PIN {DEMO_CHILD_PIN}를 입력해보세요
+        </div>
+      )}
+
       {/* 자녀가 늘어나도(4명+) 넓은 화면에서는 한 줄에 더 많이 보이게 */}
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
         {childProfiles.map((child) => (
@@ -44,12 +54,16 @@ export default async function ProfilesPage() {
             <span className="font-bold">{child.name}</span>
           </Link>
         ))}
-        <Link href="/profiles/new" className="profile-card border-dashed text-soft">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-soft text-3xl">
-            +
-          </span>
-          <span className="font-bold">프로필 추가</span>
-        </Link>
+        {/* 자녀 추가는 API에서도 막혀 있지만(demoMode.ts), 이름·PIN을 다 입력한 뒤에야
+            막혔다는 걸 알게 되는 막다른 흐름을 피하려고 데모에서는 카드 자체를 숨긴다. */}
+        {!isDemo && (
+          <Link href="/profiles/new" className="profile-card border-dashed text-soft">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-soft text-3xl">
+              +
+            </span>
+            <span className="font-bold">프로필 추가</span>
+          </Link>
+        )}
       </div>
 
       {childProfiles.length === 0 && (

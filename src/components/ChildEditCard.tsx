@@ -11,7 +11,17 @@ import type { Profile } from "@/lib/types";
 type PinStep = "closed" | "enter" | "confirm";
 type DeleteStep = "closed" | "confirm";
 
-export function ChildEditCard({ child, photoUrl }: { child: Profile; photoUrl: string | null }) {
+export function ChildEditCard({
+  child,
+  photoUrl,
+  readOnly = false,
+}: {
+  child: Profile;
+  photoUrl: string | null;
+  // 데모 체험 계정에서는 API가 어차피 막지만(demoMode.ts), 사진 올리기·PIN 재설정·삭제처럼
+  // 여러 단계를 거친 뒤에야 막혔다는 걸 알게 되는 막다른 흐름을 피하려고 버튼 자체를 미리 끈다.
+  readOnly?: boolean;
+}) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(child.name);
@@ -164,20 +174,22 @@ export function ChildEditCard({ child, photoUrl }: { child: Profile; photoUrl: s
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          disabled={photoLoading}
+          disabled={photoLoading || readOnly}
           className="relative shrink-0"
           aria-label="아바타 사진 올리기"
         >
           <Avatar emoji={avatar} photoUrl={photoUrl} />
-          <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-ink bg-white text-[10px]">
-            📷
-          </span>
+          {!readOnly && (
+            <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-ink bg-white text-[10px]">
+              📷
+            </span>
+          )}
         </button>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           onBlur={() => name.trim() && name !== child.name && saveProfile({ name })}
-          disabled={savingProfile}
+          disabled={savingProfile || readOnly}
           // min-w-0: 옆의 고정폭 아바타 버튼과 함께 flex 행에 있는데, input의 기본 최소
           // 너비(auto)가 좁은 화면에서 줄어드는 걸 막을 수 있어서 명시적으로 풀어준다.
           className="input mb-0 min-w-0 flex-1"
@@ -186,32 +198,36 @@ export function ChildEditCard({ child, photoUrl }: { child: Profile; photoUrl: s
 
       {photoLoading && <p className="mb-2 text-xs font-semibold text-soft">사진 처리하는 중...</p>}
       {photoError && <p className="mb-2 text-sm font-semibold text-red-500">{photoError}</p>}
-      {photoUrl && !photoLoading && (
+      {photoUrl && !photoLoading && !readOnly && (
         <button type="button" onClick={removePhoto} className="btn btn-ghost mb-2">
           사진 제거하고 이모지로
         </button>
       )}
 
-      <p className="mb-2 text-xs text-soft">{photoUrl ? "사진 대신 이모지를 쓰려면 아래에서 골라주세요" : "이모지 아바타"}</p>
-      <div className="mb-3 grid grid-cols-8 gap-1.5">
-        {AVATAR_OPTIONS.map((option) => (
-          <button
-            key={option}
-            type="button"
-            onClick={() => {
-              setAvatar(option);
-              saveProfile({ avatar: option, avatarPhotoPath: photoUrl ? null : undefined });
-            }}
-            className={`flex items-center justify-center rounded-xl border-2 p-1 ${
-              avatar === option && !photoUrl ? "border-accent bg-accent/10" : "border-[#eee]"
-            }`}
-          >
-            <Avatar emoji={option} size="sm" />
-          </button>
-        ))}
-      </div>
+      {!readOnly && (
+        <>
+          <p className="mb-2 text-xs text-soft">{photoUrl ? "사진 대신 이모지를 쓰려면 아래에서 골라주세요" : "이모지 아바타"}</p>
+          <div className="mb-3 grid grid-cols-8 gap-1.5">
+            {AVATAR_OPTIONS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => {
+                  setAvatar(option);
+                  saveProfile({ avatar: option, avatarPhotoPath: photoUrl ? null : undefined });
+                }}
+                className={`flex items-center justify-center rounded-xl border-2 p-1 ${
+                  avatar === option && !photoUrl ? "border-accent bg-accent/10" : "border-[#eee]"
+                }`}
+              >
+                <Avatar emoji={option} size="sm" />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
-      {pinStep === "closed" && (
+      {!readOnly && pinStep === "closed" && (
         <button type="button" onClick={startPinReset} className="btn btn-outline mb-0">
           PIN 재설정
         </button>
@@ -252,7 +268,9 @@ export function ChildEditCard({ child, photoUrl }: { child: Profile; photoUrl: s
         </div>
       )}
 
-      {deleteStep === "closed" ? (
+      {readOnly ? (
+        <p className="mb-0 mt-2 text-center text-xs text-soft">데모 체험 계정에서는 이름·PIN·삭제를 바꿀 수 없어요</p>
+      ) : deleteStep === "closed" ? (
         <button
           type="button"
           onClick={() => setDeleteStep("confirm")}

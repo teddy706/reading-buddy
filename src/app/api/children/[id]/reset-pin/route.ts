@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/currentProfile";
 import { deriveChildAuthPassword, hashPinForDisplay, isValidPin } from "@/lib/childAuth";
+import { demoBlockResponse } from "@/lib/demoMode";
 
 // 부모 전용: 자녀 PIN 재설정. synthetic 계정의 실제 비밀번호(=PIN에서 파생된 값)와
 // 표시/대조용 pin_hash를 함께 갱신하고, 잠금 상태도 초기화한다.
@@ -9,6 +10,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const parent = await getCurrentProfile();
   if (!parent) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
   if (parent.role !== "parent") return NextResponse.json({ error: "부모만 할 수 있어요." }, { status: 403 });
+  const demoBlock = await demoBlockResponse(parent, "데모 체험 계정에서는 PIN을 바꿀 수 없어요.");
+  if (demoBlock) return demoBlock;
 
   const { pin } = await request.json();
   if (!isValidPin(String(pin ?? ""))) {

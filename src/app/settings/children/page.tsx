@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { BackLink } from "@/components/BackLink";
 import { ChildEditCard } from "@/components/ChildEditCard";
 import { getAvatarPhotoUrls } from "@/lib/avatarPhoto";
+import { isDemoFamily } from "@/lib/demoMode";
 import type { Profile } from "@/lib/types";
 
 // Next.js 기본 fetch 캐시로 인한 Supabase 응답 재사용 방지 — src/app/records/page.tsx 참고.
@@ -13,12 +14,15 @@ export default async function SettingsChildrenPage() {
   const parent = await requireParentProfile();
 
   const supabase = createClient();
-  const { data: children } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("family_id", parent.family_id)
-    .eq("role", "child")
-    .order("created_at", { ascending: true });
+  const [{ data: children }, isDemo] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("*")
+      .eq("family_id", parent.family_id)
+      .eq("role", "child")
+      .order("created_at", { ascending: true }),
+    isDemoFamily(parent.family_id, supabase),
+  ]);
 
   const childProfiles = (children ?? []) as Profile[];
   const photoUrls = await getAvatarPhotoUrls(
@@ -30,6 +34,11 @@ export default async function SettingsChildrenPage() {
     <div className="app-shell">
       <BackLink href="/settings" />
       <h1 className="mb-6 text-center text-2xl font-bold">자녀 프로필 관리</h1>
+      {isDemo && (
+        <p className="mb-4 rounded-2xl border-2 border-accent bg-accent/10 p-3 text-center text-sm font-semibold">
+          🎈 데모 체험 계정에서는 둘러보기만 할 수 있어요
+        </p>
+      )}
 
       {/* lg부터 2열 — 카드 안 이모지 아바타 그리드(8열)가 촘촘해서, 폭이 충분히 넓어지는
           lg(1024px) 이상에서만 2열로 나눈다(md에서 2열로 쪼개면 오히려 더 좁아짐). */}
@@ -39,13 +48,16 @@ export default async function SettingsChildrenPage() {
             key={child.id}
             child={child}
             photoUrl={child.avatar_photo_path ? (photoUrls.get(child.avatar_photo_path) ?? null) : null}
+            readOnly={isDemo}
           />
         ))}
       </div>
 
-      <Link href="/profiles/new" className="btn btn-outline">
-        + 프로필 추가
-      </Link>
+      {!isDemo && (
+        <Link href="/profiles/new" className="btn btn-outline">
+          + 프로필 추가
+        </Link>
+      )}
     </div>
   );
 }

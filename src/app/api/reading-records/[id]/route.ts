@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/currentProfile";
 import { normalizeIsbnInput } from "@/lib/isbn";
+import { demoBlockResponse } from "@/lib/demoMode";
 import type { DokseoroStatus } from "@/lib/types";
 
 const DOKSEORO_STATUSES: DokseoroStatus[] = ["pending", "synced", "failed"];
@@ -15,6 +16,8 @@ const DOKSEORO_STATUSES: DokseoroStatus[] = ["pending", "synced", "failed"];
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const profile = await getCurrentProfile();
   if (!profile) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
+  const demoBlock = await demoBlockResponse(profile, "데모 체험 계정에서는 기록을 수정할 수 없어요.");
+  if (demoBlock) return demoBlock;
 
   const supabase = createClient();
   const { bookTitle, content, recordedDate, dokseoroStatus, pageCount, isbn } = await request.json();

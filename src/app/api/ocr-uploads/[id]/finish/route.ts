@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireChildProfileForApi } from "@/lib/currentProfile";
+import { demoBlockResponse } from "@/lib/demoMode";
 
 // /read/ocr/[id]/review 페이지 자체가 자녀 전용(requireChildProfile)이라 이 라우트도 동일하게
 // 막는다 — 세션/가족 소유권 확인은 기존대로 RLS(ocr_uploads_select, reading_records_insert)가 전담.
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const profile = await requireChildProfileForApi();
   if (profile instanceof NextResponse) return profile;
+  const demoBlock = await demoBlockResponse(profile, "데모 체험 계정에서는 독서노트 사진 기록을 저장할 수 없어요.");
+  if (demoBlock) return demoBlock;
 
   const supabase = createClient();
   const { bookTitle, content, recordedDate, pageCount } = await request.json();

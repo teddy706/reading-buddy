@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/currentProfile";
+import { demoBlockResponse } from "@/lib/demoMode";
 import { AVATAR_OPTIONS } from "@/components/Avatar";
 import { AVATAR_PHOTO_BUCKET, avatarPhotoPath } from "@/lib/avatarPhoto";
 
@@ -12,6 +13,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const parent = await getCurrentProfile();
   if (!parent) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
   if (parent.role !== "parent") return NextResponse.json({ error: "부모만 할 수 있어요." }, { status: 403 });
+  const demoBlock = await demoBlockResponse(parent);
+  if (demoBlock) return demoBlock;
 
   const body = await request.json();
   const { name, avatar } = body;
@@ -56,6 +59,8 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
   const parent = await getCurrentProfile();
   if (!parent) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
   if (parent.role !== "parent") return NextResponse.json({ error: "부모만 할 수 있어요." }, { status: 403 });
+  const demoBlock = await demoBlockResponse(parent, "데모 체험 계정에서는 자녀 프로필을 삭제할 수 없어요.");
+  if (demoBlock) return demoBlock;
 
   const admin = createAdminClient();
 

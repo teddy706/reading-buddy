@@ -11,7 +11,7 @@ import { naverBookSearchUrl } from "@/lib/externalBookSearch";
 const TITLE_SEARCH_DEBOUNCE_MS = 500;
 const MIN_TITLE_SEARCH_LENGTH = 2;
 
-export function NewBookForm() {
+export function NewBookForm({ isDemo = false }: { isDemo?: boolean }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
@@ -172,22 +172,28 @@ export function NewBookForm() {
       <div className="mx-auto w-full max-w-md">
       <h1 className="mb-6 text-center text-2xl font-bold">무슨 책 읽었어?</h1>
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={onCoverPhotoSelected}
-        className="hidden"
-      />
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        disabled={lookupLoading}
-        className="btn btn-outline"
-      >
-        {lookupLoading ? "표지를 찾는 중..." : "📷 표지 사진으로 찾기"}
-      </button>
+      {/* 표지 촬영 자동 인식은 Document Intelligence + AI 실제 호출 비용이 들어서 데모
+          계정에서는 막아둔다(demoMode.ts) — 대화 체험만 허용하기로 확인됨. */}
+      {!isDemo && (
+        <>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={onCoverPhotoSelected}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={lookupLoading}
+            className="btn btn-outline"
+          >
+            {lookupLoading ? "표지를 찾는 중..." : "📷 표지 사진으로 찾기"}
+          </button>
+        </>
+      )}
 
       {candidates && candidates.length > 0 && (
         <div className="card">

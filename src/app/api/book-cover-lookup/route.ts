@@ -3,6 +3,7 @@ import { requireChildProfileForApi } from "@/lib/currentProfile";
 import { analyzeImageBytes } from "@/lib/documentIntelligence";
 import { guessCoverTitle } from "@/lib/azureOpenAI";
 import { searchBooksMultiSource } from "@/lib/bookSearch";
+import { demoBlockResponse } from "@/lib/demoMode";
 
 // 표지 사진 -> OCR -> AI로 제목 추정 -> 카카오+네이버+도서관정보나루 도서 검색 후보 목록을 한 번에 처리한다.
 // 이 사진은 검색 보조용 일회성 자료라 Storage/DB에 저장하지 않고 요청-응답 안에서만 다룬다.
@@ -13,6 +14,8 @@ import { searchBooksMultiSource } from "@/lib/bookSearch";
 export async function POST(request: Request) {
   const profile = await requireChildProfileForApi();
   if (profile instanceof NextResponse) return profile;
+  const demoBlock = await demoBlockResponse(profile, "데모 체험 계정에서는 표지 사진 인식을 체험할 수 없어요. 책 제목을 직접 입력해보세요.");
+  if (demoBlock) return demoBlock;
 
   const formData = await request.formData();
   const file = formData.get("photo");

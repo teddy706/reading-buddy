@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/currentProfile";
+import { demoBlockResponse } from "@/lib/demoMode";
 import type { ReadingCoachStage } from "@/lib/types";
 
 const STAGES: ReadingCoachStage[] = [1, 2, 3];
@@ -13,6 +14,8 @@ export async function PATCH(request: Request) {
   const parent = await getCurrentProfile();
   if (!parent) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
   if (parent.role !== "parent") return NextResponse.json({ error: "부모만 할 수 있어요." }, { status: 403 });
+  const demoBlock = await demoBlockResponse(parent, "데모 체험 계정에서는 질문 지침을 저장할 수 없어요.");
+  if (demoBlock) return demoBlock;
 
   const { instructions } = await request.json();
   const admin = createAdminClient();

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireChildProfileForApi } from "@/lib/currentProfile";
+import { isDemoFamily } from "@/lib/demoMode";
 
 // 감상문 확인/편집 화면에서 "저장"을 누르면 호출된다. reading_records 를 만들고
 // 대화 세션은 completed 로 표시한다. '독서로' 동기화는 아직 구현 전이라 dokseoro_status는
@@ -25,6 +27,16 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   if (fetchError || !session) {
     return NextResponse.json({ error: "대화 세션을 찾을 수 없어요." }, { status: 404 });
+  }
+
+  // 데모 계정은 대화/감상문 생성 자체는 실제 AI 호출로 체험할 수 있게 허용하지만(사용자 확인
+  // 완료, 2026-09-15), 다른 방문자도 함께 보는 데모용 시딩 데이터(reading_records)를 실제로
+  // 늘리지는 않는다 — 저장 대신 이 대화 세션만 정리(삭제)하고 "체험 완료"로 응답한다.
+  if (await isDemoFamily(profile.family_id, supabase)) {
+    // conversation_sessions에는 RLS delete 정책이 없어(reading-sessions/[id]/route.ts와 동일한
+    // 이유) admin 클라이언트로 지운다.
+    await createAdminClient().from("conversation_sessions").delete().eq("id", session.id);
+    return NextResponse.json({ ok: true, demo: true });
   }
 
   const { data: record, error: insertError } = await supabase
